@@ -1,0 +1,17 @@
+[
+  {
+    "id": "jj-nov-finals",
+    "name": "Jack & Jill Novice Finals",
+    "type": "finals"
+  },
+  {
+    "id": "jj-nov-prelims",
+    "name": "Jack & Jill Novice Prelims",
+    "type": "rounds"
+  },
+  {
+    "id": "jj-int-prelims",
+    "name": "Jack & Jill Intermediate Prelims",
+    "type": "rounds"
+  }
+]

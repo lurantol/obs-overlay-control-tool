@@ -1,0 +1,22 @@
+[
+  {
+    "number": 101,
+    "fullName": "Vladimir Rokhin",
+    "role": "lead"
+  },
+  {
+    "number": 102,
+    "fullName": "Yevgeniya Karachentsova",
+    "role": "follow"
+  },
+  {
+    "number": 103,
+    "fullName": "Alex Smirnov",
+    "role": "lead"
+  },
+  {
+    "number": 104,
+    "fullName": "Olga Ivanova",
+    "role": "follow"
+  }
+]

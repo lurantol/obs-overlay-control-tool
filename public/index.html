@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Overlay Control</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Overlay Control</h1>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="live">Эфир</button>
+    <button class="tab-btn" data-tab="setup">Настройка конкурсов</button>
+    <button class="tab-btn" data-tab="admin">Админ</button>
+  </div>
+
+  <div id="tab-live" class="tab-content active">
+    <div class="subtabs">
+      <button class="live-subtab-btn active" data-subtab="finals">Финалы</button>
+      <button class="live-subtab-btn" data-subtab="rounds">Отборы</button>
+      <button class="live-subtab-btn" data-subtab="special">Special</button>
+      <button class="live-subtab-btn" data-subtab="next">NEXT</button>
+    </div>
+
+    <div id="live-subtab-finals" class="live-subtab-content active">
+      <h2>Эфир - Финалы</h2>
+
+      <div class="panel">
+        <h3>В ЭФИРЕ</h3>
+
+        <div class="row">
+          <label>Финал:</label>
+          <select id="finals-contest-select"></select>
+        </div>
+
+        <div class="columns">
+          <div class="col">
+            <h4>Лидер</h4>
+            <select id="finals-first" size="10"></select>
+          </div>
+          <div class="col">
+            <h4>Фолловер</h4>
+            <select id="finals-second" size="10"></select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div id="finals-preview" class="preview"></div>
+        </div>
+
+        <div class="row">
+          <button id="finals-apply">Применить в эфир</button>
+          <button id="onair-reset">Сбросить эфир</button>
+        </div>
+
+        <div id="finals-status" class="status"></div>
+      </div>
+    </div>
+
+    <div id="live-subtab-rounds" class="live-subtab-content">
+      <h2>Эфир - Отборы</h2>
+
+      <div class="panel">
+        <h3>В ЭФИРЕ</h3>
+
+        <div class="row">
+          <label>Отбор:</label>
+          <select id="rounds-contest-select"></select>
+        </div>
+
+        <div class="row">
+          <label>Hit:</label>
+          <div id="round-buttons" class="button-row"></div>
+        </div>
+
+        <div class="row">
+          <div id="rounds-preview" class="preview"></div>
+        </div>
+
+        <div class="row">
+          <button id="rounds-apply">Применить в эфир</button>
+          <button id="onair-reset-2">Сбросить эфир</button>
+        </div>
+
+        <div id="rounds-status" class="status"></div>
+      </div>
+    </div>
+
+    <div id="live-subtab-special" class="live-subtab-content">
+      <h2>Эфир - Special</h2>
+
+      <div class="panel">
+        <h3>В ЭФИРЕ</h3>
+
+        <div class="row">
+          <label>Special:</label>
+          <select id="special-select"></select>
+        </div>
+
+        <div class="row">
+          <label>Участник/команда:</label>
+          <select id="special-item-select"></select>
+        </div>
+
+        <div class="row">
+          <div id="special-preview" class="preview"></div>
+        </div>
+
+        <div class="row">
+          <button id="special-apply">Применить в эфир</button>
+          <button id="onair-reset-3">Сбросить эфир</button>
+        </div>
+
+        <div id="special-status" class="status"></div>
+      </div>
+    </div>
+
+    <div id="live-subtab-next" class="live-subtab-content">
+      <h2>NEXT</h2>
+
+      <div class="panel">
+        <div class="row">
+          <label>Следующая номинация:</label>
+          <select id="next-contest-select"></select>
+        </div>
+
+        <div class="row" id="next-hit-row">
+          <label>Hit (только для отборов):</label>
+          <div id="next-round-buttons" class="button-row"></div>
+        </div>
+
+        <div class="row">
+          <div id="next-preview" class="preview"></div>
+        </div>
+
+        <div class="row">
+          <button id="next-apply">Применить NEXT</button>
+          <button id="next-reset">Сбросить NEXT</button>
+        </div>
+
+        <div id="next-status" class="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-setup" class="tab-content">
+    <h2>Настройка конкурсов</h2>
+
+    <div class="row">
+      <label for="setup-contest-select">Конкурс:</label>
+      <select id="setup-contest-select"></select>
+    </div>
+
+    <div class="columns">
+      <div class="col">
+        <h3>Лидеры (по умолчанию: нечётные)</h3>
+        <div id="setup-leads"></div>
+      </div>
+      <div class="col">
+        <h3>Фолловеры (по умолчанию: чётные)</h3>
+        <div id="setup-follows"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <button id="save-contest-btn">Сохранить состав конкурса</button>
+    </div>
+
+    <div id="status-setup" class="status"></div>
+  </div>
+
+  <div id="tab-admin" class="tab-content">
+    <h2>Админ</h2>
+
+    <div class="subtabs">
+      <button class="admin-subtab-btn active" data-subtab="settings">Настройки</button>
+      <button class="admin-subtab-btn" data-subtab="import">Импорт</button>
+      <button class="admin-subtab-btn" data-subtab="special">Special</button>
+    </div>
+
+    <div id="admin-subtab-settings" class="admin-subtab-content active">
+      <div class="panel">
+        <h3>Номинации</h3>
+
+        <div class="row">
+          <label>Название:</label>
+          <input type="text" id="new-contest-name" placeholder="Strictly Open, JJ Novice Finals..." />
+        </div>
+
+        <div class="row">
+          <label>Тип:</label>
+          <select id="new-contest-type">
+            <option value="rounds">Отборы</option>
+            <option value="finals">Финалы</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <button id="add-contest-btn">Добавить номинацию</button>
+        </div>
+
+        <div id="status-admin" class="status"></div>
+
+        <h4>Список номинаций</h4>
+        <ul id="contest-list"></ul>
+      </div>
+
+      <div class="panel">
+        <h3>Кнопки Hit для отборов</h3>
+        <p class="hint">Список задаётся через запятую: <code>Hit 1, Hit 2, Hit 3</code></p>
+
+        <div class="row">
+          <label>Список:</label>
+          <input type="text" id="round-buttons-input" placeholder="Hit 1, Hit 2, Hit 3" />
+        </div>
+
+        <div class="row">
+          <button id="save-round-buttons">Сохранить кнопки</button>
+        </div>
+
+        <div id="round-buttons-status" class="status"></div>
+      </div>
+    </div>
+
+    <div id="admin-subtab-import" class="admin-subtab-content">
+      <div class="panel">
+        <h3>Импорт участников (CSV / XLS / XLSX)</h3>
+        <p class="hint">Шаг 1: загрузи файл -> увидишь заголовки -> выбери, какая колонка с номером и какая с именем.</p>
+
+        <input type="file" id="import-file" accept=".csv,.xls,.xlsx">
+        <button id="import-preview-btn">Загрузить и показать колонки</button>
+
+        <div id="import-mapping" class="mapping hidden">
+          <div class="row">
+            <label>Колонка с номером:</label>
+            <select id="import-number-col"></select>
+          </div>
+          <div class="row">
+            <label>Колонка с именем (одна строка):</label>
+            <select id="import-name-col"></select>
+          </div>
+          <div class="row">
+            <button id="import-confirm-btn">Импортировать</button>
+          </div>
+          <div class="row">
+            <pre id="import-sample" class="sample"></pre>
+          </div>
+        </div>
+
+        <div id="import-status" class="status"></div>
+      </div>
+    </div>
+
+    <div id="admin-subtab-special" class="admin-subtab-content">
+      <div class="panel">
+        <h3>Special - типы и команды</h3>
+        <p class="hint">Каждая строка - отдельный участник или команда. Можно вводить через запятую или с новой строки.</p>
+
+        <div class="row">
+          <label>Название Special:</label>
+          <input type="text" id="special-name" placeholder="Team Match, All-Stars, Showcase..." />
+        </div>
+
+        <div class="row">
+          <label>Участники / команды:</label>
+          <textarea id="special-teams" rows="8" style="width:100%" placeholder="Ирина Пузанова - Павел Катунин\nПерчики\nИрина Поповиченко - Владимир Леонов"></textarea>
+        </div>
+
+        <div class="row">
+          <button id="special-add-btn">Добавить</button>
+          <button id="special-update-btn" disabled>Сохранить изменения</button>
+          <button id="special-cancel-edit" disabled>Отмена</button>
+        </div>
+
+        <div id="special-admin-status" class="status"></div>
+
+        <h4>Список Special</h4>
+        <ul id="special-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

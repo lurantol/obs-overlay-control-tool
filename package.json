@@ -1,0 +1,16 @@
+{
+  "name": "obs-overlay-tool",
+  "version": "1.2.0",
+  "description": "Web tool to control OBS text overlays for dance competitions (finals/rounds/next) + CSV/XLSX import with column mapping",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "xlsx": "^0.18.5",
+    "csv-parse": "^5.5.6"
+  }
+}

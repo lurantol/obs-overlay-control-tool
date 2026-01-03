@@ -1,0 +1,24 @@
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:16px;}
+h1{margin-top:0}
+.row{margin-bottom:12px}
+.columns{display:flex;gap:16px;flex-wrap:wrap}
+.col{flex:1 1 240px}
+select{width:100%}
+.status{margin-top:8px;font-size:14px}
+.preview{font-weight:600;margin-top:8px;white-space:pre-line}
+.tabs{margin-bottom:12px}
+.tab-btn,.live-subtab-btn,.admin-subtab-btn{padding:8px 12px;margin-right:4px;font-size:14px}
+.tab-btn.active,.live-subtab-btn.active,.admin-subtab-btn.active{font-weight:700}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.subtabs{margin:8px 0 12px 0}
+.live-subtab-content,.admin-subtab-content{display:none}
+.live-subtab-content.active,.admin-subtab-content.active{display:block}
+.panel{border:1px solid #ddd;border-radius:10px;padding:12px;margin:12px 0}
+.button-row{display:flex;gap:8px;flex-wrap:wrap}
+.small-btn{padding:6px 10px;border:1px solid #aaa;border-radius:8px;background:#fff;cursor:pointer}
+.small-btn.active{border-width:2px}
+.hint{font-size:13px;color:#555;margin-top:-6px}
+code{background:#f5f5f5;padding:2px 4px;border-radius:4px}
+.mapping.hidden{display:none}
+.sample{background:#f6f6f6;border:1px solid #ddd;border-radius:8px;padding:8px;overflow:auto;max-height:220px}
