@@ -1,5 +1,13 @@
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:16px;}
 h1{margin-top:0}
+
+.header-row{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.service-links{border:1px solid #ddd;border-radius:10px;padding:10px;min-width:320px;max-width:520px}
+.service-title{font-weight:700;margin-bottom:8px}
+.service-item{margin-bottom:10px}
+.service-item label{display:block;font-size:13px;color:#333;margin-bottom:4px}
+.service-input-row{display:flex;gap:8px;align-items:center}
+.service-input-row input{flex:1 1 auto}
 .row{margin-bottom:12px}
 .columns{display:flex;gap:16px;flex-wrap:wrap}
 .col{flex:1 1 240px}

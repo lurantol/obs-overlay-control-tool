@@ -7,7 +7,29 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Overlay Control</h1>
+  <div class="header-row">
+    <h1>Overlay Control</h1>
+
+    <div class="service-links" aria-label="Служебные ссылки">
+      <div class="service-title">Служебные ссылки (Browser Source)</div>
+
+      <div class="service-item">
+        <label>Current</label>
+        <div class="service-input-row">
+          <input id="service-current-url" type="text" readonly />
+          <button class="small-btn" id="copy-current-url">Копировать</button>
+        </div>
+      </div>
+
+      <div class="service-item">
+        <label>Next</label>
+        <div class="service-input-row">
+          <input id="service-next-url" type="text" readonly />
+          <button class="small-btn" id="copy-next-url">Копировать</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="live">Эфир</button>
@@ -70,8 +92,9 @@
         </div>
 
         <div class="row">
-          <label>Hit:</label>
+          <label>HEAT:</label>
           <div id="round-buttons" class="button-row"></div>
+          <button class="small-btn" id="rounds-clear-heat" title="Убрать HEAT">Без HEAT</button>
         </div>
 
         <div class="row">
@@ -125,9 +148,10 @@
           <select id="next-contest-select"></select>
         </div>
 
-        <div class="row" id="next-hit-row">
-          <label>Hit (только для отборов):</label>
+        <div class="row" id="next-heat-row">
+          <label>HEAT (только для отборов):</label>
           <div id="next-round-buttons" class="button-row"></div>
+          <button class="small-btn" id="next-clear-heat" title="Убрать HEAT">Без HEAT</button>
         </div>
 
         <div class="row">
@@ -154,7 +178,7 @@
 
     <div class="columns">
       <div class="col">
-        <h3>Лидеры (по умолчанию: нечётные)</h3>
+        <h3>Лиды (по умолчанию: нечётные)</h3>
         <div id="setup-leads"></div>
       </div>
       <div class="col">
@@ -207,12 +231,12 @@
       </div>
 
       <div class="panel">
-        <h3>Кнопки Hit для отборов</h3>
-        <p class="hint">Список задаётся через запятую: <code>Hit 1, Hit 2, Hit 3</code></p>
+        <h3>Кнопки HEAT для отборов</h3>
+        <p class="hint">Список задаётся через запятую: <code>Heat 1, Heat 2, Heat 3</code></p>
 
         <div class="row">
           <label>Список:</label>
-          <input type="text" id="round-buttons-input" placeholder="Hit 1, Hit 2, Hit 3" />
+          <input type="text" id="round-buttons-input" placeholder="Heat 1, Heat 2, Heat 3" />
         </div>
 
         <div class="row">
