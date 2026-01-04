@@ -62,8 +62,9 @@ let roundsContests = [];
 let roundButtons = [];
 let participants = [];
 
-let roundsSelectedHit = null;
-let nextSelectedHit = null;
+// "HEAT" is the correct term for rounds in competitions (not "HEAT")
+let roundsSelectedHeat = null;
+let nextSelectedHeat = null;
 
 let specialsAll = []; // [{id,name,info,teams:[...] }]
 let specialEditId = null;
@@ -79,11 +80,19 @@ const finalsPreview = document.getElementById('finals-preview');
 const roundsContestSelect = document.getElementById('rounds-contest-select');
 const roundsPreview = document.getElementById('rounds-preview');
 const roundButtonsDiv = document.getElementById('round-buttons');
+const roundsClearHeatBtn = document.getElementById('rounds-clear-heat');
 
 const nextContestSelect = document.getElementById('next-contest-select');
 const nextPreview = document.getElementById('next-preview');
 const nextRoundButtonsDiv = document.getElementById('next-round-buttons');
-const nextHitRow = document.getElementById('next-hit-row');
+const nextHeatRow = document.getElementById('next-heat-row');
+const nextClearHeatBtn = document.getElementById('next-clear-heat');
+
+// Service links (Browser Source)
+const serviceCurrentUrlInput = document.getElementById('service-current-url');
+const serviceNextUrlInput = document.getElementById('service-next-url');
+const copyCurrentUrlBtn = document.getElementById('copy-current-url');
+const copyNextUrlBtn = document.getElementById('copy-next-url');
 
 // Live: Special
 const specialSelect = document.getElementById('special-select');
@@ -183,7 +192,7 @@ function fillSpecialList() {
 async function loadRoundButtons() {
   const res = await fetch(apiBase + '/api/round-buttons');
   roundButtons = await res.json();
-  if (!Array.isArray(roundButtons) || roundButtons.length === 0) roundButtons = ['Hit 1', 'Hit 2', 'Hit 3'];
+  if (!Array.isArray(roundButtons) || roundButtons.length === 0) roundButtons = ['Heat 1', 'Heat 2', 'Heat 3', 'Heat 4'];
   roundButtonsInput.value = roundButtons.join(', ');
 }
 
@@ -215,17 +224,17 @@ function updateFinalsPreview() {
 function updateRoundsPreview() {
   const contestId = roundsContestSelect.value;
   const c = contestById(contestId, contestsAll);
-  const hitPart = roundsSelectedHit ? ` • ${roundsSelectedHit}` : '';
-  roundsPreview.textContent = c ? `${c.name}${hitPart}` : '';
+  const heatPart = roundsSelectedHeat ? ` • ${roundsSelectedHeat}` : '';
+  roundsPreview.textContent = c ? `${c.name}${heatPart}` : '';
 }
 
 function updateNextPreview() {
   const contestId = nextContestSelect.value;
   const c = contestById(contestId, contestsAll);
   if (!c) { nextPreview.textContent = ''; return; }
-  const hit = (c.type === 'rounds') ? nextSelectedHit : null;
-  const hitPart = hit ? ` • ${hit}` : '';
-  nextPreview.textContent = `NEXT: ${c.name}${hitPart}`;
+  const heat = (c.type === 'rounds') ? nextSelectedHeat : null;
+  const heatPart = heat ? ` • ${heat}` : '';
+  nextPreview.textContent = `NEXT: ${c.name}${heatPart}`;
 }
 
 function specialById(id) { return specialsAll.find(x => x.id === id); }
@@ -259,6 +268,50 @@ function updateSpecialPreview() {
   const selectedIdx = specialItemSelect ? Number(specialItemSelect.value) : 0;
   const line = Number.isFinite(selectedIdx) ? (list[selectedIdx] || '') : '';
   specialPreview.textContent = line ? `${s.name}\n${line}` : `${s.name}`;
+}
+
+/** Service links (Browser Source) */
+function fillServiceLinks() {
+  if (!serviceCurrentUrlInput || !serviceNextUrlInput) return;
+  const origin = window.location.origin;
+  serviceCurrentUrlInput.value = `${origin}/overlay.html?mode=current`;
+  serviceNextUrlInput.value = `${origin}/overlay.html?mode=next`;
+}
+
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+  // Fallback (some browsers / insecure contexts)
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand('copy'); } catch {}
+  document.body.removeChild(ta);
+  return true;
+}
+
+if (copyCurrentUrlBtn) {
+  copyCurrentUrlBtn.addEventListener('click', async () => {
+    const ok = await copyToClipboard(serviceCurrentUrlInput?.value || '');
+    if (ok) copyCurrentUrlBtn.textContent = 'Скопировано';
+    setTimeout(() => { copyCurrentUrlBtn.textContent = 'Копировать'; }, 800);
+  });
+}
+
+if (copyNextUrlBtn) {
+  copyNextUrlBtn.addEventListener('click', async () => {
+    const ok = await copyToClipboard(serviceNextUrlInput?.value || '');
+    if (ok) copyNextUrlBtn.textContent = 'Скопировано';
+    setTimeout(() => { copyNextUrlBtn.textContent = 'Копировать'; }, 800);
+  });
 }
 
 /** Live: Finals */
@@ -322,11 +375,11 @@ async function refreshRounds() {
   roundsContestSelect.value = contestId;
 
   const onSelect = (lbl) => {
-    roundsSelectedHit = lbl;
-    renderRoundButtons(roundButtonsDiv, onSelect, roundsSelectedHit);
+    roundsSelectedHeat = lbl;
+    renderRoundButtons(roundButtonsDiv, onSelect, roundsSelectedHeat);
     updateRoundsPreview();
   };
-  renderRoundButtons(roundButtonsDiv, onSelect, roundsSelectedHit);
+  renderRoundButtons(roundButtonsDiv, onSelect, roundsSelectedHeat);
 
   updateRoundsPreview();
   setText('rounds-status', 'Готово');
@@ -339,7 +392,7 @@ document.getElementById('rounds-apply').addEventListener('click', async () => {
     const res = await fetch(apiBase + '/api/onair/rounds', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contestId, hitLabel: roundsSelectedHit })
+      body: JSON.stringify({ contestId, heatLabel: roundsSelectedHeat })
     });
     const data = await res.json();
     if (!res.ok) { setText('rounds-status', 'Ошибка: ' + (data.error || 'unknown')); return; }
@@ -351,6 +404,13 @@ document.getElementById('rounds-apply').addEventListener('click', async () => {
 
 roundsContestSelect.addEventListener('change', refreshRounds);
 
+if (roundsClearHeatBtn) {
+  roundsClearHeatBtn.addEventListener('click', () => {
+    roundsSelectedHeat = null;
+    refreshRounds();
+  });
+}
+
 /** Live: NEXT */
 async function refreshNext() {
   fillSelect(nextContestSelect, contestsAll);
@@ -361,14 +421,14 @@ async function refreshNext() {
 
   const c = contestById(contestId, contestsAll);
   const isRounds = c && c.type === 'rounds';
-  nextHitRow.style.display = isRounds ? 'block' : 'none';
+  nextHeatRow.style.display = isRounds ? 'block' : 'none';
 
   const onSelect = (lbl) => {
-    nextSelectedHit = lbl;
-    renderRoundButtons(nextRoundButtonsDiv, onSelect, nextSelectedHit);
+    nextSelectedHeat = lbl;
+    renderRoundButtons(nextRoundButtonsDiv, onSelect, nextSelectedHeat);
     updateNextPreview();
   };
-  renderRoundButtons(nextRoundButtonsDiv, onSelect, nextSelectedHit);
+  renderRoundButtons(nextRoundButtonsDiv, onSelect, nextSelectedHeat);
 
   updateNextPreview();
   setText('next-status', 'Готово');
@@ -422,16 +482,23 @@ document.getElementById('special-apply').addEventListener('click', async () => {
 
 nextContestSelect.addEventListener('change', refreshNext);
 
+if (nextClearHeatBtn) {
+  nextClearHeatBtn.addEventListener('click', () => {
+    nextSelectedHeat = null;
+    refreshNext();
+  });
+}
+
 document.getElementById('next-apply').addEventListener('click', async () => {
   const contestId = nextContestSelect.value;
   const c = contestById(contestId, contestsAll);
-  const hitLabel = (c && c.type === 'rounds') ? nextSelectedHit : null;
+  const heatLabel = (c && c.type === 'rounds') ? nextSelectedHeat : null;
   setText('next-status', 'Применение...');
   try {
     const res = await fetch(apiBase + '/api/next', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contestId, hitLabel })
+      body: JSON.stringify({ contestId, heatLabel })
     });
     const data = await res.json();
     if (!res.ok) { setText('next-status', 'Ошибка: ' + (data.error || 'unknown')); return; }
@@ -752,5 +819,6 @@ async function fullRefresh() {
 
 // Init
 (async function init() {
+  fillServiceLinks();
   await fullRefresh();
 })();

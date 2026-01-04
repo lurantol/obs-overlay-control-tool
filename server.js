@@ -1,5 +1,6 @@
 // server.js
 const express = require('express');
+const os = require('os');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
@@ -20,6 +21,10 @@ const contestParticipantsPath = path.join(dataDir, 'contest-participants.json');
 const roundsButtonsPath = path.join(dataDir, 'round-buttons.json');
 const specialsPath = path.join(dataDir, 'specials.json');
 
+// Browser Overlay (for OBS Browser Source)
+// Uses the same output files that are used for Text Source.
+// This avoids OBS file refresh glitches (missing glyphs) by rendering via Browser Source.
+
 // Output files for OBS
 const currentTitleFile = path.join(outDir, 'current_title.txt');
 const currentPairFile = path.join(outDir, 'current_pair.txt');
@@ -29,7 +34,7 @@ const nextTitleFile = path.join(outDir, 'next_title.txt');
 let participants = []; // [{number, fullName, role}]
 let contests = []; // [{id, name, type: 'finals'|'rounds'}]
 let contestParticipants = {}; // { contestId: [numbers...] }
-let roundButtons = []; // ['Hit 1', 'Hit 2', ...]
+let roundButtons = []; // ['Heat 1', 'Heat 2', ...]
 let specials = []; // [{id, name, items:[...] }]
 
 // Import staging (single-user local; resets on server restart)
@@ -51,11 +56,20 @@ function writeFile(p, text) {
   fs.writeFileSync(p, text || '', 'utf8');
 }
 
+function readTextFileSafe(p) {
+  try {
+    if (!fs.existsSync(p)) return '';
+    return fs.readFileSync(p, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
 function initData() {
   participants = loadJson(participantsPath, []);
   contests = loadJson(contestsPath, []);
   contestParticipants = loadJson(contestParticipantsPath, {});
-  roundButtons = loadJson(roundsButtonsPath, ['Hit 1', 'Hit 2', 'Hit 3', 'Hit 4']);
+  roundButtons = loadJson(roundsButtonsPath, ['Heat 1', 'Heat 2', 'Heat 3', 'Heat 4']);
   const rawSpecials = loadJson(specialsPath, []);
   specials = Array.isArray(rawSpecials)
     ? rawSpecials.map(normalizeSpecial).filter(Boolean)
@@ -98,10 +112,10 @@ function contestById(id) {
   return contests.find(c => c.id === id);
 }
 
-function buildTitle(contestName, hitLabel, isNext) {
+function buildTitle(contestName, heatLabel, isNext) {
   const prefix = isNext ? 'NEXT: ' : '';
-  const hitPart = hitLabel ? ` • ${hitLabel}` : '';
-  return `${prefix}${contestName || ''}${hitPart}`.trim();
+  const heatPart = heatLabel ? ` • ${heatLabel}` : '';
+  return `${prefix}${contestName || ''}${heatPart}`.trim();
 }
 
 function buildSpecialTitle(name) {
@@ -176,6 +190,16 @@ function parseParticipantsFromRows(rows, numberCol, nameCol) {
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// API: current overlay state (for Browser Source)
+app.get('/api/state', (req, res) => {
+  res.json({
+    currentTitle: readTextFileSafe(currentTitleFile),
+    currentPair: readTextFileSafe(currentPairFile),
+    nextTitle: readTextFileSafe(nextTitleFile),
+    updatedAt: Date.now()
+  });
+});
 
 // API: contests
 app.get('/api/contests', (req, res) => {
@@ -284,15 +308,15 @@ app.post('/api/onair/finals', (req, res) => {
 
 // APPLY: "В эфире" (Rounds) - clears pair
 app.post('/api/onair/rounds', (req, res) => {
-  const { contestId, hitLabel } = req.body;
+  const { contestId, heatLabel } = req.body;
   if (!contestId) return res.status(400).json({ error: 'contestId required' });
 
   const contest = contestById(contestId);
   if (!contest) return res.status(400).json({ error: 'invalid contestId' });
   if (contest.type !== 'rounds') return res.status(400).json({ error: 'contest is not rounds type' });
 
-  const hit = hitLabel ? String(hitLabel) : null;
-  writeFile(currentTitleFile, buildTitle(contest.name, hit, false));
+  const heat = heatLabel ? String(heatLabel) : null;
+  writeFile(currentTitleFile, buildTitle(contest.name, heat, false));
   writeFile(currentPairFile, ''); // requirement: clear pair in rounds mode
 
   res.json({ ok: true });
@@ -319,16 +343,16 @@ app.post('/api/onair/special', (req, res) => {
   res.json({ ok: true });
 });
 
-// APPLY NEXT (any contest type, hit only for rounds)
+// APPLY NEXT (any contest type, heat only for rounds)
 app.post('/api/next', (req, res) => {
-  const { contestId, hitLabel } = req.body;
+  const { contestId, heatLabel } = req.body;
   if (!contestId) return res.status(400).json({ error: 'contestId required' });
 
   const contest = contestById(contestId);
   if (!contest) return res.status(400).json({ error: 'invalid contestId' });
 
-  const hit = (contest.type === 'rounds' && hitLabel) ? String(hitLabel) : null;
-  writeFile(nextTitleFile, buildTitle(contest.name, hit, true));
+  const heat = (contest.type === 'rounds' && heatLabel) ? String(heatLabel) : null;
+  writeFile(nextTitleFile, buildTitle(contest.name, heat, true));
 
   res.json({ ok: true });
 });
@@ -428,6 +452,28 @@ app.post('/api/import/participants/confirm', (req, res) => {
 
 initData();
 
+function getLocalIPv4s() {
+  const nets = os.networkInterfaces();
+  const results = [];
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      if (net && net.family === 'IPv4' && !net.internal) results.push(net.address);
+    }
+  }
+  // unique
+  return Array.from(new Set(results));
+}
+
 app.listen(PORT, () => {
-  console.log(`Server listening on http://0.0.0.0:${PORT}`);
+  const ips = getLocalIPv4s();
+  console.log(`Server listening:`);
+  console.log(`- Local: http://127.0.0.1:${PORT}`);
+  console.log(`- Local: http://localhost:${PORT}`);
+  ips.forEach(ip => console.log(`- LAN:   http://${ip}:${PORT}`));
+  console.log('Browser Source URLs:');
+  const baseHosts = ['127.0.0.1', 'localhost', ...ips];
+  baseHosts.forEach(host => {
+    console.log(`- Current: http://${host}:${PORT}/overlay.html?mode=current`);
+    console.log(`- Next:    http://${host}:${PORT}/overlay.html?mode=next`);
+  });
 });

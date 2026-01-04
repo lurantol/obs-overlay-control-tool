@@ -1,0 +1,51 @@
+:root {
+  --font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --title-size: 48px;
+  --pair-size: 40px;
+  --line-height: 1.1;
+  --shadow: 0 2px 8px rgba(0,0,0,0.55);
+  --pad-x: 24px;
+  --pad-y: 16px;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: var(--font-family);
+}
+
+.root {
+  box-sizing: border-box;
+  padding: var(--pad-y) var(--pad-x);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.title {
+  font-size: var(--title-size);
+  line-height: var(--line-height);
+  color: white;
+  text-shadow: var(--shadow);
+  white-space: pre-wrap;
+}
+
+.pair {
+  margin-top: 8px;
+  font-size: var(--pair-size);
+  line-height: var(--line-height);
+  color: white;
+  text-shadow: var(--shadow);
+  white-space: pre-wrap;
+}
+
+.hidden {
+  display: none;
+}
