@@ -19,6 +19,7 @@
   const mode = (qs.get('mode') || 'current').toLowerCase();
   const interval = Number(qs.get('interval') || 300);
   const hideEmpty = (qs.get('hideEmpty') ?? '1') !== '0';
+  const preview = (qs.get('preview') ?? '0') === '1';
 
   // Optional quick sizing from URL
   const titleSize = qs.get('titleSize');
@@ -53,6 +54,16 @@
 
   async function tick() {
     try {
+      if (preview) {
+        // In preview mode we don't depend on live state (use sample text)
+        if (mode === 'next') {
+          render('NEXT', '');
+        } else {
+          render('Заголовок / Division', 'Лидер Тест - Follower Test');
+        }
+        return;
+      }
+
       const res = await fetch('/api/state', { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
@@ -69,10 +80,33 @@
     }
   }
 
+  async function loadOverlaySettings() {
+    try {
+      const res = await fetch('/api/overlay-settings', { cache: 'no-store' });
+      if (!res.ok) return;
+      const s = await res.json();
+      if (s && typeof s === 'object') {
+        if (s.titleFontFamily) document.documentElement.style.setProperty('--title-font-family', String(s.titleFontFamily));
+        if (s.pairFontFamily) document.documentElement.style.setProperty('--pair-font-family', String(s.pairFontFamily));
+        if (s.titleSizePx) document.documentElement.style.setProperty('--title-size', `${Number(s.titleSizePx)}px`);
+        if (s.pairSizePx) document.documentElement.style.setProperty('--pair-size', `${Number(s.pairSizePx)}px`);
+        if (s.titleColor) document.documentElement.style.setProperty('--title-color', String(s.titleColor));
+        if (s.pairColor) document.documentElement.style.setProperty('--pair-color', String(s.pairColor));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   function start() {
     if (timer) clearInterval(timer);
-    tick();
+    loadOverlaySettings().finally(() => tick());
     timer = setInterval(tick, Math.max(100, Math.min(2000, interval)));
+
+    // In preview mode, also poll settings periodically so iframe reflects saved changes.
+    if (preview) {
+      setInterval(loadOverlaySettings, 500);
+    }
   }
 
   start();

@@ -35,6 +35,7 @@
     <button class="tab-btn active" data-tab="live">Эфир</button>
     <button class="tab-btn" data-tab="setup">Настройка конкурсов</button>
     <button class="tab-btn" data-tab="admin">Админ</button>
+    <button class="tab-btn" data-tab="overlay">Browser Overlay</button>
   </div>
 
   <div id="tab-live" class="tab-content active">
@@ -302,6 +303,76 @@
         <h4>Список Special</h4>
         <ul id="special-list"></ul>
       </div>
+    </div>
+  </div>
+
+  <div id="tab-overlay" class="tab-content">
+    <h2>Browser Overlay</h2>
+
+    <div class="panel">
+      <h3>Настройка внешнего вида (веб-страница для Browser Source)</h3>
+      <p class="hint">Эти настройки применяются к /overlay.html (Current и Next). После сохранения OBS Browser Source обновит стиль автоматически.</p>
+
+      <div class="columns">
+        <div class="col">
+          <h4>Шрифты</h4>
+          <div class="row">
+            <label>Title шрифт:</label>
+            <select id="overlay-title-font"></select>
+          </div>
+          <div class="row">
+            <label>Pair шрифт:</label>
+            <select id="overlay-pair-font"></select>
+          </div>
+
+          <div class="row">
+            <label>Добавить шрифт (ttf/otf/woff/woff2):</label>
+            <input type="file" id="overlay-font-upload" accept=".ttf,.otf,.woff,.woff2" />
+            <button id="overlay-font-upload-btn">Загрузить</button>
+          </div>
+          <p class="hint">После загрузки шрифт появится в списке. Имя берётся из названия файла.</p>
+        </div>
+
+        <div class="col">
+          <h4>Предпросмотр</h4>
+          <p class="hint">Мини-превью реального оверлея (как в OBS Browser Source). Показывает сохранённые настройки.</p>
+          <div style="width: 100%; aspect-ratio: 16 / 9; background: rgba(0,0,0,0.15); border-radius: 10px; overflow: hidden;">
+            <iframe id="overlay-preview" src="/overlay.html?mode=current&preview=1&hideEmpty=0" style="width:100%;height:100%;border:0;"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="columns">
+        <div class="col">
+          <h4>Title</h4>
+          <div class="row">
+            <label>Размер (px):</label>
+            <input type="number" id="overlay-title-size" min="10" max="200" step="1" />
+          </div>
+          <div class="row">
+            <label>Цвет:</label>
+            <input type="color" id="overlay-title-color" />
+          </div>
+        </div>
+
+        <div class="col">
+          <h4>Pair</h4>
+          <div class="row">
+            <label>Размер (px):</label>
+            <input type="number" id="overlay-pair-size" min="10" max="200" step="1" />
+          </div>
+          <div class="row">
+            <label>Цвет:</label>
+            <input type="color" id="overlay-pair-color" />
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="overlay-save">Сохранить настройки</button>
+      </div>
+
+      <div id="overlay-status" class="status"></div>
     </div>
   </div>
 

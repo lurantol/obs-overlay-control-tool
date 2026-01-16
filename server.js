@@ -20,6 +20,12 @@ const contestsPath = path.join(dataDir, 'contests.json');
 const contestParticipantsPath = path.join(dataDir, 'contest-participants.json');
 const roundsButtonsPath = path.join(dataDir, 'round-buttons.json');
 const specialsPath = path.join(dataDir, 'specials.json');
+const overlaySettingsPath = path.join(dataDir, 'overlay-settings.json');
+
+// Custom fonts for Browser Overlay
+const fontsDir = path.join(__dirname, 'public', 'fonts');
+const fontsDbPath = path.join(dataDir, 'fonts.json');
+let customFonts = []; // [{ name, file }]
 
 // Browser Overlay (for OBS Browser Source)
 // Uses the same output files that are used for Text Source.
@@ -36,6 +42,16 @@ let contests = []; // [{id, name, type: 'finals'|'rounds'}]
 let contestParticipants = {}; // { contestId: [numbers...] }
 let roundButtons = []; // ['Heat 1', 'Heat 2', ...]
 let specials = []; // [{id, name, items:[...] }]
+
+// Browser Overlay appearance (font/size/color)
+let overlaySettings = {
+  titleFontFamily: 'system-ui',
+  pairFontFamily: 'system-ui',
+  titleSizePx: 48,
+  pairSizePx: 40,
+  titleColor: '#ffffff',
+  pairColor: '#ffffff'
+};
 
 // Import staging (single-user local; resets on server restart)
 let importStash = new Map(); // token -> { ext, rows, headers, uploadedAt }
@@ -76,7 +92,93 @@ function initData() {
     : [];
   // If we migrated anything, persist new shape to disk.
   saveJson(specialsPath, specials);
+
+  // Overlay settings (persist defaults if file missing)
+  const loadedOverlaySettings = loadJson(overlaySettingsPath, overlaySettings);
+  overlaySettings = normalizeOverlaySettings(loadedOverlaySettings);
+  saveJson(overlaySettingsPath, overlaySettings);
+
+  // Custom fonts
+  if (!fs.existsSync(fontsDir)) fs.mkdirSync(fontsDir, { recursive: true });
+  customFonts = loadJson(fontsDbPath, []);
+  if (!Array.isArray(customFonts)) customFonts = [];
+  customFonts = customFonts
+    .filter(f => f && typeof f === 'object')
+    .map(f => ({ name: String(f.name || '').trim(), file: String(f.file || '').trim() }))
+    .filter(f => f.name && f.file);
+  saveJson(fontsDbPath, customFonts);
+  regenerateFontsCss();
+
   console.log(`Loaded ${participants.length} participants, ${contests.length} contests`);
+}
+
+function normalizeOverlaySettings(input) {
+  const s = (input && typeof input === 'object') ? input : {};
+  const titleFontFamily = String(s.titleFontFamily ?? overlaySettings.titleFontFamily).trim() || overlaySettings.titleFontFamily;
+  const pairFontFamily = String(s.pairFontFamily ?? overlaySettings.pairFontFamily).trim() || overlaySettings.pairFontFamily;
+  const titleSizePx = clampInt(s.titleSizePx ?? overlaySettings.titleSizePx, 10, 200, overlaySettings.titleSizePx);
+  const pairSizePx = clampInt(s.pairSizePx ?? overlaySettings.pairSizePx, 10, 200, overlaySettings.pairSizePx);
+  const titleColor = normalizeHexColor(s.titleColor ?? overlaySettings.titleColor) || overlaySettings.titleColor;
+  const pairColor = normalizeHexColor(s.pairColor ?? overlaySettings.pairColor) || overlaySettings.pairColor;
+  return { titleFontFamily, pairFontFamily, titleSizePx, pairSizePx, titleColor, pairColor };
+}
+
+function sanitizeFontName(name) {
+  return String(name || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[^a-zA-Z0-9 _\-]/g, '')
+    .slice(0, 64);
+}
+
+function regenerateFontsCss() {
+  if (!fs.existsSync(fontsDir)) fs.mkdirSync(fontsDir, { recursive: true });
+  const cssPath = path.join(fontsDir, 'fonts.css');
+  const lines = [];
+  for (const f of customFonts) {
+    const fontName = sanitizeFontName(f.name);
+    const file = String(f.file || '').trim();
+    if (!fontName || !file) continue;
+    const urlPath = `/fonts/${encodeURIComponent(file)}`;
+    const ext = path.extname(file).toLowerCase();
+    let format = '';
+    if (ext === '.woff2') format = 'woff2';
+    else if (ext === '.woff') format = 'woff';
+    else if (ext === '.otf') format = 'opentype';
+    else if (ext === '.ttf') format = 'truetype';
+
+    lines.push(`@font-face {`);
+    lines.push(`  font-family: "${fontName}";`);
+    if (format) {
+      lines.push(`  src: url('${urlPath}') format('${format}');`);
+    } else {
+      lines.push(`  src: url('${urlPath}');`);
+    }
+    lines.push(`  font-display: swap;`);
+    lines.push(`}`);
+  }
+  fs.writeFileSync(cssPath, lines.join('\n') + (lines.length ? '\n' : ''), 'utf8');
+}
+
+function clampInt(value, min, max, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(n)));
+}
+
+function normalizeHexColor(value) {
+  const v = String(value || '').trim();
+  if (!v) return null;
+  // Allow #rgb or #rrggbb
+  if (/^#([0-9a-fA-F]{3}){1,2}$/.test(v)) {
+    // If #rgb, expand to #rrggbb for consistency
+    if (v.length === 4) {
+      const r = v[1], g = v[2], b = v[3];
+      return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+    }
+    return v.toLowerCase();
+  }
+  return null;
 }
 
 function slugId(name, existingIds) {
@@ -199,6 +301,70 @@ app.get('/api/state', (req, res) => {
     nextTitle: readTextFileSafe(nextTitleFile),
     updatedAt: Date.now()
   });
+});
+
+// API: overlay appearance settings (for Browser Source)
+app.get('/api/overlay-settings', (req, res) => {
+  res.json(overlaySettings);
+});
+
+app.post('/api/overlay-settings', (req, res) => {
+  overlaySettings = normalizeOverlaySettings(req.body);
+  saveJson(overlaySettingsPath, overlaySettings);
+  res.json({ ok: true, overlaySettings });
+});
+
+// API: fonts for Browser Overlay
+function getBuiltInFonts() {
+  // Keep this list short & useful (no massive font-family strings).
+  return [
+    'system-ui',
+    'Arial',
+    'Helvetica',
+    'Verdana',
+    'Trebuchet MS',
+    'Georgia',
+    'Times New Roman',
+    'Courier New',
+    'Impact'
+  ];
+}
+
+app.get('/api/fonts', (req, res) => {
+  const builtIn = getBuiltInFonts();
+  const uploaded = customFonts.map(f => sanitizeFontName(f.name)).filter(Boolean);
+  const fonts = Array.from(new Set([...builtIn, ...uploaded]));
+  res.json({ fonts, customFonts: customFonts.map(f => ({ name: sanitizeFontName(f.name), file: f.file })) });
+});
+
+app.post('/api/fonts/upload', upload.single('font'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const original = String(req.file.originalname || 'font').trim();
+    const ext = path.extname(original).toLowerCase();
+    const allowed = new Set(['.ttf', '.otf', '.woff', '.woff2']);
+    if (!allowed.has(ext)) return res.status(400).json({ error: 'Unsupported font type. Use ttf/otf/woff/woff2' });
+
+    const baseName = sanitizeFontName(path.basename(original, ext)) || 'Custom Font';
+    const hash = crypto.createHash('sha1').update(req.file.buffer).digest('hex').slice(0, 10);
+    const filename = `${baseName.replace(/\s+/g, '_')}-${hash}${ext}`;
+
+    if (!fs.existsSync(fontsDir)) fs.mkdirSync(fontsDir, { recursive: true });
+    fs.writeFileSync(path.join(fontsDir, filename), req.file.buffer);
+
+    // Upsert by name
+    const existingIdx = customFonts.findIndex(f => sanitizeFontName(f.name) === baseName);
+    const entry = { name: baseName, file: filename };
+    if (existingIdx >= 0) customFonts[existingIdx] = entry;
+    else customFonts.push(entry);
+
+    saveJson(fontsDbPath, customFonts);
+    regenerateFontsCss();
+
+    res.json({ ok: true, font: { name: baseName, file: filename } });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to upload font' });
+  }
 });
 
 // API: contests

@@ -94,6 +94,19 @@ const serviceNextUrlInput = document.getElementById('service-next-url');
 const copyCurrentUrlBtn = document.getElementById('copy-current-url');
 const copyNextUrlBtn = document.getElementById('copy-next-url');
 
+// Overlay settings UI (Browser Overlay appearance)
+const overlayTitleFontSelect = document.getElementById('overlay-title-font');
+const overlayPairFontSelect = document.getElementById('overlay-pair-font');
+const overlayFontUploadInput = document.getElementById('overlay-font-upload');
+const overlayFontUploadBtn = document.getElementById('overlay-font-upload-btn');
+const overlayPreviewFrame = document.getElementById('overlay-preview');
+const overlayTitleSizeInput = document.getElementById('overlay-title-size');
+const overlayPairSizeInput = document.getElementById('overlay-pair-size');
+const overlayTitleColorInput = document.getElementById('overlay-title-color');
+const overlayPairColorInput = document.getElementById('overlay-pair-color');
+const overlaySaveBtn = document.getElementById('overlay-save');
+const overlayStatusEl = document.getElementById('overlay-status');
+
 // Live: Special
 const specialSelect = document.getElementById('special-select');
 const specialItemSelect = document.getElementById('special-item-select');
@@ -802,6 +815,137 @@ saveRoundButtonsBtn.addEventListener('click', async () => {
   }
 });
 
+/** Browser Overlay appearance settings */
+async function loadOverlayFontsUI() {
+  if (!overlayTitleFontSelect || !overlayPairFontSelect) return;
+  try {
+    const res = await fetch(apiBase + '/api/fonts', { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    const fonts = Array.isArray(data.fonts) ? data.fonts : [];
+
+    function fillSelect(select) {
+      const current = select.value;
+      select.innerHTML = '';
+      for (const f of fonts) {
+        const opt = document.createElement('option');
+        opt.value = f;
+        opt.textContent = f;
+        // Lightweight preview inside the dropdown
+        opt.style.fontFamily = f;
+        select.appendChild(opt);
+      }
+      if (current && fonts.includes(current)) select.value = current;
+    }
+
+    fillSelect(overlayTitleFontSelect);
+    fillSelect(overlayPairFontSelect);
+  } catch {
+    // ignore
+  }
+}
+
+async function loadOverlaySettingsUI() {
+  if (!overlayTitleFontSelect || !overlayPairFontSelect) return;
+  try {
+    const res = await fetch(apiBase + '/api/overlay-settings', { cache: 'no-store' });
+    if (!res.ok) return;
+    const s = await res.json();
+
+    const titleFont = String(s.titleFontFamily || 'system-ui');
+    const pairFont = String(s.pairFontFamily || 'system-ui');
+
+    // If the saved font isn't in the dropdown list (e.g. old config), add it.
+    function ensureOption(select, value) {
+      if (!value) return;
+      const exists = Array.from(select.options).some(o => o.value === value);
+      if (!exists) {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = value;
+        opt.style.fontFamily = value;
+        select.appendChild(opt);
+      }
+    }
+    ensureOption(overlayTitleFontSelect, titleFont);
+    ensureOption(overlayPairFontSelect, pairFont);
+
+    overlayTitleFontSelect.value = titleFont;
+    overlayPairFontSelect.value = pairFont;
+    overlayTitleSizeInput.value = Number(s.titleSizePx || 48);
+    overlayPairSizeInput.value = Number(s.pairSizePx || 40);
+    overlayTitleColorInput.value = String(s.titleColor || '#ffffff');
+    overlayPairColorInput.value = String(s.pairColor || '#ffffff');
+    setText('overlay-status', '');
+  } catch {
+    setText('overlay-status', 'Ошибка связи с сервером');
+  }
+}
+
+if (overlaySaveBtn) {
+  overlaySaveBtn.addEventListener('click', async () => {
+    setText('overlay-status', 'Сохранение...');
+    try {
+      const payload = {
+        titleFontFamily: overlayTitleFontSelect.value,
+        pairFontFamily: overlayPairFontSelect.value,
+        titleSizePx: Number(overlayTitleSizeInput.value),
+        pairSizePx: Number(overlayPairSizeInput.value),
+        titleColor: overlayTitleColorInput.value,
+        pairColor: overlayPairColorInput.value,
+      };
+
+      const res = await fetch(apiBase + '/api/overlay-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) { setText('overlay-status', 'Ошибка: ' + (data.error || 'unknown')); return; }
+      setText('overlay-status', 'Сохранено. OBS Browser Source обновит стиль автоматически.');
+      await loadOverlaySettingsUI();
+
+      // Force refresh preview iframe immediately
+      if (overlayPreviewFrame) {
+        const base = '/overlay.html?mode=current&preview=1&hideEmpty=0';
+        overlayPreviewFrame.src = base + `&t=${Date.now()}`;
+      }
+    } catch {
+      setText('overlay-status', 'Ошибка связи с сервером');
+    }
+  });
+}
+
+if (overlayFontUploadBtn) {
+  overlayFontUploadBtn.addEventListener('click', async () => {
+    if (!overlayFontUploadInput || !overlayFontUploadInput.files || overlayFontUploadInput.files.length === 0) {
+      setText('overlay-status', 'Выбери файл шрифта для загрузки');
+      return;
+    }
+    const file = overlayFontUploadInput.files[0];
+    setText('overlay-status', 'Загрузка шрифта...');
+    try {
+      const fd = new FormData();
+      fd.append('font', file);
+      const res = await fetch(apiBase + '/api/fonts/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        setText('overlay-status', 'Ошибка: ' + (data.error || 'upload failed'));
+        return;
+      }
+      await loadOverlayFontsUI();
+      // Auto-select uploaded font for both dropdowns (user can change later)
+      if (data.font && data.font.name) {
+        overlayTitleFontSelect.value = data.font.name;
+        overlayPairFontSelect.value = data.font.name;
+      }
+      setText('overlay-status', 'Шрифт загружен. Не забудь нажать «Сохранить настройки»');
+    } catch {
+      setText('overlay-status', 'Ошибка связи с сервером');
+    }
+  });
+}
+
 async function fullRefresh() {
   await loadContests();
   await loadRoundButtons();
@@ -815,6 +959,8 @@ async function fullRefresh() {
   await refreshSpecial();
   await refreshNext();
   await refreshSetup();
+  await loadOverlayFontsUI();
+  await loadOverlaySettingsUI();
 }
 
 // Init
