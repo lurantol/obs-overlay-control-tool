@@ -1,0 +1,8 @@
+{
+  "titleFontFamily": "Trebuchet MS",
+  "pairFontFamily": "Georgia",
+  "titleSizePx": 48,
+  "pairSizePx": 40,
+  "titleColor": "#ffffff",
+  "pairColor": "#ffffff"
+}

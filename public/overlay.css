@@ -1,7 +1,10 @@
 :root {
-  --font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --title-font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --pair-font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   --title-size: 48px;
   --pair-size: 40px;
+  --title-color: #ffffff;
+  --pair-color: #ffffff;
   --line-height: 1.1;
   --shadow: 0 2px 8px rgba(0,0,0,0.55);
   --pad-x: 24px;
@@ -15,7 +18,7 @@ html, body {
   height: 100%;
   background: transparent;
   overflow: hidden;
-  font-family: var(--font-family);
+  font-family: var(--title-font-family);
 }
 
 .root {
@@ -30,18 +33,20 @@ html, body {
 }
 
 .title {
+  font-family: var(--title-font-family);
   font-size: var(--title-size);
   line-height: var(--line-height);
-  color: white;
+  color: var(--title-color);
   text-shadow: var(--shadow);
   white-space: pre-wrap;
 }
 
 .pair {
+  font-family: var(--pair-font-family);
   margin-top: 8px;
   font-size: var(--pair-size);
   line-height: var(--line-height);
-  color: white;
+  color: var(--pair-color);
   text-shadow: var(--shadow);
   white-space: pre-wrap;
 }
