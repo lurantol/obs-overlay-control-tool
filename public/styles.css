@@ -30,3 +30,24 @@ select{width:100%}
 code{background:#f5f5f5;padding:2px 4px;border-radius:4px}
 .mapping.hidden{display:none}
 .sample{background:#f6f6f6;border:1px solid #ddd;border-radius:8px;padding:8px;overflow:auto;max-height:220px}
+
+
+.checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.radio-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.radio-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}

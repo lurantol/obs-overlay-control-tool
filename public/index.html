@@ -58,14 +58,21 @@
         </div>
 
         <div class="columns">
-          <div class="col">
+<div class="col">
             <h4>Лидер</h4>
             <select id="finals-first" size="10"></select>
           </div>
-          <div class="col">
+<div class="col">
             <h4>Фолловер</h4>
             <select id="finals-second" size="10"></select>
           </div>
+        </div>
+
+        <div class="row">
+          <label class="checkbox-inline">
+            <input type="checkbox" id="finals-no-pair">
+            Без пары
+          </label>
         </div>
 
         <div class="row">
@@ -123,13 +130,20 @@
         </div>
 
         <div class="row">
-          <label>Участник/команда:</label>
-          <select id="special-item-select"></select>
-        </div>
+  <label>Участник/команда:</label>
+  <select id="special-item-select"></select>
+</div>
 
-        <div class="row">
-          <div id="special-preview" class="preview"></div>
-        </div>
+<div class="row">
+  <label class="checkbox-inline">
+    <input type="checkbox" id="special-no-pair">
+    Без пары
+  </label>
+</div>
+
+<div class="row">
+  <div id="special-preview" class="preview"></div>
+</div>
 
         <div class="row">
           <button id="special-apply">Применить в эфир</button>
@@ -265,6 +279,21 @@
             <label>Колонка с именем (одна строка):</label>
             <select id="import-name-col"></select>
           </div>
+
+          <div class="row">
+            <label>Роли по номеру:</label>
+            <div class="radio-row">
+              <label class="radio-inline">
+                <input type="radio" name="import-leader-parity" id="import-leader-odd" value="odd" checked>
+                Лидер — нечётные
+              </label>
+              <label class="radio-inline">
+                <input type="radio" name="import-leader-parity" id="import-leader-even" value="even">
+                Лидер — чётные
+              </label>
+            </div>
+          </div>
+
           <div class="row">
             <button id="import-confirm-btn">Импортировать</button>
           </div>

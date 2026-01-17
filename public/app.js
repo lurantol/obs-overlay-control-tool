@@ -75,6 +75,7 @@ let importToken = null;
 const finalsContestSelect = document.getElementById('finals-contest-select');
 const finalsFirst = document.getElementById('finals-first');
 const finalsSecond = document.getElementById('finals-second');
+const finalsNoPair = document.getElementById('finals-no-pair');
 const finalsPreview = document.getElementById('finals-preview');
 
 const roundsContestSelect = document.getElementById('rounds-contest-select');
@@ -111,6 +112,7 @@ const overlayStatusEl = document.getElementById('overlay-status');
 const specialSelect = document.getElementById('special-select');
 const specialItemSelect = document.getElementById('special-item-select');
 const specialPreview = document.getElementById('special-preview');
+const specialNoPair = document.getElementById('special-no-pair');
 
 // Admin: Special
 const specialNameInput = document.getElementById('special-name');
@@ -139,6 +141,11 @@ const importConfirmBtn = document.getElementById('import-confirm-btn');
 const importMappingDiv = document.getElementById('import-mapping');
 const importNumberColSelect = document.getElementById('import-number-col');
 const importNameColSelect = document.getElementById('import-name-col');
+const importLeaderOdd = document.getElementById('import-leader-odd');
+const importLeaderEven = document.getElementById('import-leader-even');
+function importLeaderParity() {
+  return (importLeaderEven && importLeaderEven.checked) ? 'even' : 'odd';
+}
 const importSamplePre = document.getElementById('import-sample');
 
 /** Loaders */
@@ -155,7 +162,12 @@ async function loadSpecials() {
   if (!Array.isArray(specialsAll)) specialsAll = [];
 }
 
-function fillSelect(selectEl, list) {
+// Fill a <select> with contests and preserve selection when possible.
+// Some browsers reset the selected value to the first option when we rebuild
+// the option list, which makes it look like the contest "cannot be selected".
+function fillSelect(selectEl, list, preferredValue) {
+  if (!selectEl) return;
+  const current = (preferredValue !== undefined) ? preferredValue : selectEl.value;
   selectEl.innerHTML = '';
   list.forEach(c => {
     const opt = document.createElement('option');
@@ -163,6 +175,11 @@ function fillSelect(selectEl, list) {
     opt.textContent = c.name;
     selectEl.appendChild(opt);
   });
+  // Restore selection if the option still exists.
+  if (current) {
+    const exists = Array.from(selectEl.options).some(o => o.value === current);
+    if (exists) selectEl.value = current;
+  }
 }
 
 function fillContestList() {
@@ -229,9 +246,16 @@ function renderRoundButtons(targetDiv, onSelect, selectedValue) {
 function updateFinalsPreview() {
   const contestId = finalsContestSelect.value;
   const c = contestById(contestId, contestsAll);
+  const noPair = finalsNoPair && finalsNoPair.checked;
+  if (!c) { finalsPreview.textContent = ''; return; }
+  if (noPair) {
+    finalsPreview.textContent = `${c.name}`;
+    return;
+  }
   const a = participants.find(p => p.number === Number(finalsFirst.value));
   const b = participants.find(p => p.number === Number(finalsSecond.value));
-  finalsPreview.textContent = (c && a && b) ? `${c.name}\n${a.fullName} — ${b.fullName}` : '';
+  finalsPreview.textContent = (a && b) ? `${c.name}
+${a.fullName} — ${b.fullName}` : `${c.name}`;
 }
 
 function updateRoundsPreview() {
@@ -277,10 +301,16 @@ function updateSpecialPreview() {
   const specialId = specialSelect.value;
   const s = specialById(specialId);
   if (!s) { specialPreview.textContent = ''; return; }
+  const noPair = specialNoPair && specialNoPair.checked;
+  if (noPair) {
+    specialPreview.textContent = `${s.name}`;
+    return;
+  }
   const list = Array.isArray(s.items) ? s.items : [];
   const selectedIdx = specialItemSelect ? Number(specialItemSelect.value) : 0;
   const line = Number.isFinite(selectedIdx) ? (list[selectedIdx] || '') : '';
-  specialPreview.textContent = line ? `${s.name}\n${line}` : `${s.name}`;
+  specialPreview.textContent = line ? `${s.name}
+${line}` : `${s.name}`;
 }
 
 /** Service links (Browser Source) */
@@ -340,6 +370,14 @@ async function refreshFinals() {
 
   await loadParticipantsForContest(contestId);
 
+  if (!Array.isArray(participants) || participants.length === 0) {
+    finalsFirst.innerHTML = '';
+    finalsSecond.innerHTML = '';
+    finalsPreview.textContent = '';
+    setText('finals-status', 'В этом конкурсе пока не выбраны участники (Админ → Настройки конкурса).');
+    return;
+  }
+
   finalsFirst.innerHTML = '';
   finalsSecond.innerHTML = '';
   participants.forEach(p => {
@@ -362,7 +400,7 @@ document.getElementById('finals-apply').addEventListener('click', async () => {
     const res = await fetch(apiBase + '/api/onair/finals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contestId, firstNumber, secondNumber })
+      body: JSON.stringify({ contestId, firstNumber, secondNumber, noPair: !!(finalsNoPair && finalsNoPair.checked) })
     });
     const data = await res.json();
     if (!res.ok) { setText('finals-status', 'Ошибка: ' + (data.error || 'unknown')); return; }
@@ -375,6 +413,7 @@ document.getElementById('finals-apply').addEventListener('click', async () => {
 finalsContestSelect.addEventListener('change', refreshFinals);
 finalsFirst.addEventListener('change', updateFinalsPreview);
 finalsSecond.addEventListener('change', updateFinalsPreview);
+if (finalsNoPair) finalsNoPair.addEventListener('change', updateFinalsPreview);
 
 /** Live: Rounds */
 async function refreshRounds() {
@@ -470,6 +509,7 @@ specialSelect.addEventListener('change', refreshSpecial);
 
 if (specialItemSelect) {
   specialItemSelect.addEventListener('change', updateSpecialPreview);
+if (specialNoPair) specialNoPair.addEventListener('change', updateSpecialPreview);
 }
 
 document.getElementById('special-apply').addEventListener('click', async () => {
@@ -483,7 +523,7 @@ document.getElementById('special-apply').addEventListener('click', async () => {
     const res = await fetch(apiBase + '/api/onair/special', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ specialId, itemText })
+      body: JSON.stringify({ specialId, itemText, noPair: !!(specialNoPair && specialNoPair.checked) })
     });
     const data = await res.json();
     if (!res.ok) { setText('special-status', 'Ошибка: ' + (data.error || 'unknown')); return; }
@@ -557,6 +597,18 @@ async function refreshSetup() {
   setupLeadsDiv.innerHTML = '';
   setupFollowsDiv.innerHTML = '';
 
+  // Load already saved subset for selected contest (if any)
+  const contestId = setupContestSelect.value || (contestsAll[0] && contestsAll[0].id);
+  if (contestId) setupContestSelect.value = contestId;
+  let savedSet = null; // null = not set yet
+  try {
+    const r = await fetch(apiBase + `/api/contest-participants?contestId=${encodeURIComponent(contestId)}`, { cache: 'no-store' });
+    if (r.ok) {
+      const d = await r.json();
+      if (Array.isArray(d.participantNumbers)) savedSet = new Set(d.participantNumbers.map(Number));
+    }
+  } catch {}
+
   const leads = all.filter(p => p.role === 'lead');
   const follows = all.filter(p => p.role === 'follow');
 
@@ -564,6 +616,7 @@ async function refreshSetup() {
     const label = document.createElement('label');
     const cb = document.createElement('input');
     cb.type = 'checkbox'; cb.value = p.number;
+    if (savedSet && savedSet.has(p.number)) cb.checked = true;
     label.appendChild(cb);
     label.append(` ${p.number} — ${p.fullName}`);
     setupLeadsDiv.appendChild(label);
@@ -574,14 +627,24 @@ async function refreshSetup() {
     const label = document.createElement('label');
     const cb = document.createElement('input');
     cb.type = 'checkbox'; cb.value = p.number;
+    if (savedSet && savedSet.has(p.number)) cb.checked = true;
     label.appendChild(cb);
     label.append(` ${p.number} — ${p.fullName}`);
     setupFollowsDiv.appendChild(label);
     setupFollowsDiv.appendChild(document.createElement('br'));
   });
 
-  setText('status-setup', 'Отметь участников для выбранного конкурса и нажми "Сохранить".');
+  if (savedSet === null) {
+    setText('status-setup', 'Не удалось загрузить состав конкурса (ошибка связи).');
+  } else if (savedSet.size === 0) {
+    setText('status-setup', 'Состав конкурса пустой: в эфире список участников будет ПУСТЫМ. Отметь участников и нажми "Сохранить".');
+  } else {
+    setText('status-setup', `Состав конкурса загружен: выбрано ${savedSet.size}. Можно изменить и нажать "Сохранить".`);
+  }
 }
+
+// Refresh setup when contest changes
+if (setupContestSelect) setupContestSelect.addEventListener('change', refreshSetup);
 
 document.getElementById('save-contest-btn').addEventListener('click', async () => {
   const contestId = setupContestSelect.value;
@@ -780,7 +843,7 @@ importConfirmBtn.addEventListener('click', async () => {
     const res = await fetch(apiBase + '/api/import/participants/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: importToken, numberColumn, nameColumn })
+      body: JSON.stringify({ token: importToken, numberColumn, nameColumn, leaderParity: importLeaderParity() })
     });
     const data = await res.json();
     if (!res.ok) { setText('import-status', 'Ошибка: ' + (data.error || 'unknown')); return; }
