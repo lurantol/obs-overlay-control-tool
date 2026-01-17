@@ -59,7 +59,7 @@
         if (mode === 'next') {
           render('NEXT', '');
         } else {
-          render('Заголовок / Division', 'Лидер Тест - Follower Test');
+          render('TITLE / DIVISION', 'Leader - Follower');
         }
         return;
       }

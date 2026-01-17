@@ -1,17 +1,122 @@
 [
   {
-    "id": "jj-nov-finals",
-    "name": "Jack & Jill Novice Finals",
+    "id": "strictly-novice-prelims",
+    "name": "Stricty Novice Prelims",
+    "type": "rounds"
+  },
+  {
+    "id": "strictly-novice-finals",
+    "name": "Strictly Novice Finals",
     "type": "finals"
   },
   {
-    "id": "jj-nov-prelims",
+    "id": "strictly-intermediate-prelims",
+    "name": "Stricty Intermediate Prelims",
+    "type": "rounds"
+  },
+  {
+    "id": "strictly-intermediate-finals",
+    "name": "Strictly Intermediate Finals",
+    "type": "finals"
+  },
+  {
+    "id": "strictly-open-prelims",
+    "name": "Strictly Open Prelims",
+    "type": "rounds"
+  },
+  {
+    "id": "strictly-open-finals",
+    "name": "Strictly Open Finals",
+    "type": "finals"
+  },
+  {
+    "id": "jj-newcomer-prelims",
+    "name": "Jack & Jill Newcomer Prelims",
+    "type": "rounds"
+  },
+  {
+    "id": "jj-newcomer-finals",
+    "name": "Jack & Jill Newcomer Finals",
+    "type": "finals"
+  },
+  {
+    "id": "jj-novice-prelims",
     "name": "Jack & Jill Novice Prelims",
     "type": "rounds"
   },
   {
-    "id": "jj-int-prelims",
+    "id": "jj-novice-semis",
+    "name": "Jack & Jill Novice Semis",
+    "type": "rounds"
+  },
+  {
+    "id": "jj-novice-finals",
+    "name": "Jack & Jill Novice Finals",
+    "type": "finals"
+  },
+  {
+    "id": "jj-intermediate-prelims",
     "name": "Jack & Jill Intermediate Prelims",
     "type": "rounds"
+  },
+  {
+    "id": "jj-intermediate-finals",
+    "name": "Jack & Jill Intermediate Finals",
+    "type": "finals"
+  },
+  {
+    "id": "jj-advanced-prelims",
+    "name": "Jack & Jill Advanced Prelims",
+    "type": "rounds"
+  },
+  {
+    "id": "jj-advanced-finals",
+    "name": "Jack & Jill Advanced Finals",
+    "type": "finals"
+  },
+  {
+    "id": "jj-allstar-prelims",
+    "name": "Jack & Jill All Star Prelims",
+    "type": "rounds"
+  },
+  {
+    "id": "jj-allstar-finals",
+    "name": "Jack & Jill All Star Finals",
+    "type": "finals"
+  },
+  {
+    "id": "jj-switch-prelims",
+    "name": "Jack & Jill Switch Roles Prelims",
+    "type": "rounds"
+  },
+  {
+    "id": "jj-switch-finals",
+    "name": "Jack & Jill Switch Roles Finals",
+    "type": "finals"
+  },
+  {
+    "id": "jj-sophisticated-prelims",
+    "name": "Jack & Jill Sophisticated Prelims",
+    "type": "rounds"
+  },
+  {
+    "id": "jj-sophisticated-finals",
+    "name": "Jack & Jill Sophisticated Finals",
+    "type": "finals"
+  },
+  {
+    "id": "dressup-jackpot-jill-prelims",
+    "name": "Dress up JackPot & Jill Prelims",
+    "type": "rounds"
+  },
+  {
+    "id": "dressup-jackpot-jill-finals",
+    "name": "Dress up JackPot & Jill Finals",
+    "type": "finals"
+  },
+  {
+    "id": "awards",
+    "name": "Награждение",
+    "type": "finals"
   }
 ]

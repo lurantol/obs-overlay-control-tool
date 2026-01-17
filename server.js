@@ -193,10 +193,13 @@ function specialById(id) {
   return specials.find(s => s.id === id);
 }
 
-function roleByNumber(number) {
-  // Default rule: odd => lead, even => follow
+function roleByNumber(number, leaderParity = 'odd') {
+  // leaderParity: 'odd' or 'even'
   if (!Number.isFinite(number)) return 'unknown';
-  return (number % 2 === 1) ? 'lead' : 'follow';
+  const isOdd = (number % 2 === 1);
+  const leaderIsOdd = (leaderParity !== 'even');
+  const isLeader = leaderIsOdd ? isOdd : !isOdd;
+  return isLeader ? 'lead' : 'follow';
 }
 
 function findParticipant(number) {
@@ -205,7 +208,14 @@ function findParticipant(number) {
 
 function getParticipantsForContest(contestId) {
   const allowed = contestParticipants[contestId];
-  if (!allowed || allowed.length === 0) return participants;
+  // Contest participants subset behavior:
+  // - If a contest has NO configured participant list -> return NONE.
+  // - If a contest is configured with an empty list -> return NONE.
+  // This matches the operator expectation: if nobody is selected in setup,
+  // the on-air participant dropdowns must be empty.
+  if (allowed === undefined) return [];
+  if (!Array.isArray(allowed)) return [];
+  if (allowed.length === 0) return [];
   const set = new Set(allowed);
   return participants.filter(p => set.has(p.number));
 }
@@ -263,7 +273,7 @@ function readRowsFromUpload(buffer, ext) {
   throw new Error('unsupported file type');
 }
 
-function parseParticipantsFromRows(rows, numberCol, nameCol) {
+function parseParticipantsFromRows(rows, numberCol, nameCol, leaderParity = 'odd') {
   const parsed = [];
   const errors = [];
   for (let i = 0; i < rows.length; i++) {
@@ -278,7 +288,7 @@ function parseParticipantsFromRows(rows, numberCol, nameCol) {
       errors.push({ row: i + 2, number: numRaw, name: nameRaw }); // +2 because header row is row 1
       continue;
     }
-    parsed.push({ number: num, fullName, role: roleByNumber(num) });
+    parsed.push({ number: num, fullName, role: roleByNumber(num, leaderParity) });
   }
 
   // de-duplicate by number (last wins)
@@ -455,20 +465,25 @@ app.delete('/api/specials/:id', (req, res) => {
 
 // APPLY: "В эфире" (Finals)
 app.post('/api/onair/finals', (req, res) => {
-  const { contestId, firstNumber, secondNumber } = req.body;
+  const { contestId, firstNumber, secondNumber, noPair } = req.body;
   if (!contestId) return res.status(400).json({ error: 'contestId required' });
 
   const contest = contestById(contestId);
   if (!contest) return res.status(400).json({ error: 'invalid contestId' });
   if (contest.type !== 'finals') return res.status(400).json({ error: 'contest is not finals type' });
 
+  writeFile(currentTitleFile, buildTitle(contest.name, null, false));
+
+  if (Boolean(noPair)) {
+    writeFile(currentPairFile, '');
+    return res.json({ ok: true });
+  }
+
   const a = findParticipant(Number(firstNumber));
   const b = findParticipant(Number(secondNumber));
   if (!a || !b) return res.status(400).json({ error: 'invalid participant numbers' });
 
-  writeFile(currentTitleFile, buildTitle(contest.name, null, false));
   writeFile(currentPairFile, `${a.fullName} — ${b.fullName}`);
-
   res.json({ ok: true });
 });
 
@@ -490,22 +505,26 @@ app.post('/api/onair/rounds', (req, res) => {
 
 // APPLY: "В эфире" (Special)
 app.post('/api/onair/special', (req, res) => {
-  const { specialId, itemText } = req.body;
+  const { specialId, itemText, noPair } = req.body;
   if (!specialId) return res.status(400).json({ error: 'specialId required' });
   const s = specialById(specialId);
   if (!s) return res.status(400).json({ error: 'invalid specialId' });
 
+  writeFile(currentTitleFile, buildSpecialTitle(s.name));
+
+  if (Boolean(noPair)) {
+    writeFile(currentPairFile, '');
+    return res.json({ ok: true });
+  }
+
   const list = Array.isArray(s.items) ? s.items : [];
   const chosen = String(itemText || '').trim();
   if (!chosen) return res.status(400).json({ error: 'itemText required' });
-  // Guard against accidental mismatches
   if (!list.includes(chosen)) {
     return res.status(400).json({ error: 'itemText must be one of the Special items' });
   }
 
-  writeFile(currentTitleFile, buildSpecialTitle(s.name));
   writeFile(currentPairFile, chosen);
-
   res.json({ ok: true });
 });
 
@@ -535,6 +554,17 @@ app.post('/api/reset/next', (req, res) => {
 });
 
 // Contest participants subset
+app.get('/api/contest-participants', (req, res) => {
+  const contestId = req.query.contestId;
+  if (!contestId) return res.status(400).json({ error: 'contestId is required' });
+  const list = contestParticipants[contestId];
+  // If contest is not configured yet, treat it as "no participants selected".
+  // This ensures on-air dropdowns are empty until the operator explicitly selects participants.
+  if (list === undefined) return res.json({ contestId, participantNumbers: [] });
+  if (!Array.isArray(list)) return res.json({ contestId, participantNumbers: [] });
+  return res.json({ contestId, participantNumbers: list.map(Number).filter(n => Number.isFinite(n)) });
+});
+
 app.post('/api/contest-participants', (req, res) => {
   const { contestId, participantNumbers } = req.body;
   if (!contestId || !Array.isArray(participantNumbers)) {
@@ -582,7 +612,7 @@ app.post('/api/import/participants/preview', upload.single('file'), (req, res) =
 // IMPORT: confirm (use token + selected columns)
 app.post('/api/import/participants/confirm', (req, res) => {
   try {
-    const { token, numberColumn, nameColumn } = req.body;
+    const { token, numberColumn, nameColumn, leaderParity } = req.body;
     if (!token || !numberColumn || !nameColumn) {
       return res.status(400).json({ error: 'token, numberColumn, nameColumn are required' });
     }
@@ -595,7 +625,8 @@ app.post('/api/import/participants/confirm', (req, res) => {
       return res.status(400).json({ error: 'selected columns not found in headers' });
     }
 
-    const { finalList, errors } = parseParticipantsFromRows(stash.rows, numberColumn, nameColumn);
+    const parity = (leaderParity === 'even') ? 'even' : 'odd';
+    const { finalList, errors } = parseParticipantsFromRows(stash.rows, numberColumn, nameColumn, parity);
 
     participants = finalList;
     saveJson(participantsPath, participants);
