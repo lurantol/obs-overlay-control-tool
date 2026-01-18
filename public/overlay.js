@@ -61,7 +61,7 @@
         if (mode === 'next') {
           render('NEXT', '');
         } else {
-          render('TITLE / DIVISION', 'Leader - Follower');
+          render('Заголовок / Division', 'Лидер - Follower');
         }
         return;
       }
