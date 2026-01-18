@@ -360,39 +360,40 @@
             <button id="overlay-font-upload-btn">Загрузить</button>
           </div>
           <p class="hint">После загрузки шрифт появится в списке. Имя берётся из названия файла.</p>
+
+          <h4 style="margin-top: 18px;">Размеры и цвета</h4>
+          <div class="columns" style="gap: 12px;">
+            <div class="col" style="flex: 1 1 220px;">
+              <h4 style="margin: 0 0 8px 0;">Title</h4>
+              <div class="row">
+                <label>Размер (px):</label>
+                <input type="number" id="overlay-title-size" min="10" max="200" step="1" />
+              </div>
+              <div class="row">
+                <label>Цвет:</label>
+                <input type="color" id="overlay-title-color" />
+              </div>
+            </div>
+
+            <div class="col" style="flex: 1 1 220px;">
+              <h4 style="margin: 0 0 8px 0;">Pair</h4>
+              <div class="row">
+                <label>Размер (px):</label>
+                <input type="number" id="overlay-pair-size" min="10" max="200" step="1" />
+              </div>
+              <div class="row">
+                <label>Цвет:</label>
+                <input type="color" id="overlay-pair-color" />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="col">
           <h4>Предпросмотр</h4>
           <p class="hint">Мини-превью реального оверлея (как в OBS Browser Source). Показывает сохранённые настройки.</p>
-          <div style="width: 100%; aspect-ratio: 16 / 9; background: rgba(0,0,0,0.15); border-radius: 10px; overflow: hidden;">
+          <div style="width: 100%; height: 140px; background: rgba(0,0,0,0.15); border-radius: 10px; overflow: hidden;">
             <iframe id="overlay-preview" src="/overlay.html?mode=current&preview=1&hideEmpty=0" style="width:100%;height:100%;border:0;"></iframe>
-          </div>
-        </div>
-      </div>
-
-      <div class="columns">
-        <div class="col">
-          <h4>Title</h4>
-          <div class="row">
-            <label>Размер (px):</label>
-            <input type="number" id="overlay-title-size" min="10" max="200" step="1" />
-          </div>
-          <div class="row">
-            <label>Цвет:</label>
-            <input type="color" id="overlay-title-color" />
-          </div>
-        </div>
-
-        <div class="col">
-          <h4>Pair</h4>
-          <div class="row">
-            <label>Размер (px):</label>
-            <input type="number" id="overlay-pair-size" min="10" max="200" step="1" />
-          </div>
-          <div class="row">
-            <label>Цвет:</label>
-            <input type="color" id="overlay-pair-color" />
           </div>
         </div>
       </div>
