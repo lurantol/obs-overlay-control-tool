@@ -60,6 +60,37 @@
 
 ---
 
+## Operator Mode (новая вкладка)
+
+С версии **Stage 1** добавлена вкладка **Operator Mode**. Это отдельный "пульт" под iPad (touch-first) для работы во время эфира.
+
+**Важно:** на Этапе 1 вкладка содержит только UI-каркас и дизайн. Подключение к OBS, история, выбор танцоров и остальной функционал будут добавлены следующими этапами.
+
+### Operator Mode → View
+
+- Два превью-блока:
+  - **ON AIR (Program)**
+  - **PREVIEW (Studio Mode)**
+- Блок больших кнопок управления (макет):
+  - Prev / Next
+  - Choose dancers
+  - Clear / Apply (плейсхолдер)
+- Блок **History** (плейсхолдер)
+- Статус **OBS** (плейсхолдер)
+
+### Operator Mode → Settings
+
+- OBS Connection:
+  - Host / Port / Password
+  - Test connection / Save (на Этапе 1 без логики)
+- Screenshots:
+  - interval / quality / resolution
+  - toggles (Preview only if Studio Mode, Auto-refresh)
+
+---
+
+---
+
 ## Вкладка «Эфир»
 
 Основная рабочая панель оператора.

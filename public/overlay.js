@@ -32,9 +32,7 @@
 
   let lastTitle = null;
   let lastPair = null;
-  let lastSettingsJson = null;
   let timer = null;
-  let settingsTimer = null;
 
   function setVisible(el, isVisible) {
     if (!hideEmpty) return;
@@ -61,7 +59,7 @@
         if (mode === 'next') {
           render('NEXT', '');
         } else {
-          render('Заголовок / Division', 'Лидер - Follower');
+          render('TITLE / DIVISION', 'Leader - Follower');
         }
         return;
       }
@@ -88,36 +86,13 @@
       if (!res.ok) return;
       const s = await res.json();
       if (s && typeof s === 'object') {
-        const settingsJson = JSON.stringify(s);
-        if (settingsJson === lastSettingsJson) return;
-        lastSettingsJson = settingsJson;
-
         if (s.titleFontFamily) document.documentElement.style.setProperty('--title-font-family', String(s.titleFontFamily));
         if (s.pairFontFamily) document.documentElement.style.setProperty('--pair-font-family', String(s.pairFontFamily));
         if (s.titleSizePx) document.documentElement.style.setProperty('--title-size', `${Number(s.titleSizePx)}px`);
         if (s.pairSizePx) document.documentElement.style.setProperty('--pair-size', `${Number(s.pairSizePx)}px`);
         if (s.titleColor) document.documentElement.style.setProperty('--title-color', String(s.titleColor));
         if (s.pairColor) document.documentElement.style.setProperty('--pair-color', String(s.pairColor));
-
-        // OBS Browser Source may cache fonts.css. When font settings change (or a new font is uploaded),
-        // force a re-fetch by swapping the <link> with a cache-busting query string.
-        reloadFontsCss();
       }
-    } catch {
-      // ignore
-    }
-  }
-
-  function reloadFontsCss() {
-    try {
-      const id = 'fonts-css-dynamic';
-      const existing = document.getElementById(id);
-      if (existing) existing.remove();
-      const link = document.createElement('link');
-      link.id = id;
-      link.rel = 'stylesheet';
-      link.href = `/fonts/fonts.css?v=${Date.now()}`;
-      document.head.appendChild(link);
     } catch {
       // ignore
     }
@@ -125,14 +100,13 @@
 
   function start() {
     if (timer) clearInterval(timer);
-    if (settingsTimer) clearInterval(settingsTimer);
-
     loadOverlaySettings().finally(() => tick());
     timer = setInterval(tick, Math.max(100, Math.min(2000, interval)));
 
-    // Always poll settings so the overlay updates in OBS without requiring manual refresh.
-    // (OBS Browser Source is often long-lived and may not reload when operator saves settings.)
-    settingsTimer = setInterval(loadOverlaySettings, preview ? 500 : 1000);
+    // In preview mode, also poll settings periodically so iframe reflects saved changes.
+    if (preview) {
+      setInterval(loadOverlaySettings, 500);
+    }
   }
 
   start();

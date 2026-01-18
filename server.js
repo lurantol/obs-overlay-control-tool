@@ -301,14 +301,6 @@ function parseParticipantsFromRows(rows, numberCol, nameCol, leaderParity = 'odd
 // Express
 app.use(cors());
 app.use(express.json());
-
-// Serve custom fonts with no caching.
-// OBS Browser Source can be aggressive with caching, so we disable cache for /fonts/*.
-app.use('/fonts', express.static(fontsDir, {
-  setHeaders: (res) => {
-    res.setHeader('Cache-Control', 'no-store, max-age=0');
-  }
-}));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API: current overlay state (for Browser Source)

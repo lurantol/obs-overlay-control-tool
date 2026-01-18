@@ -36,6 +36,7 @@
     <button class="tab-btn" data-tab="setup">Настройка конкурсов</button>
     <button class="tab-btn" data-tab="admin">Админ</button>
     <button class="tab-btn" data-tab="overlay">Browser Overlay</button>
+    <button class="tab-btn" data-tab="operator">Operator Mode</button>
   </div>
 
   <div id="tab-live" class="tab-content active">
@@ -360,40 +361,39 @@
             <button id="overlay-font-upload-btn">Загрузить</button>
           </div>
           <p class="hint">После загрузки шрифт появится в списке. Имя берётся из названия файла.</p>
-
-          <h4 style="margin-top: 18px;">Размеры и цвета</h4>
-          <div class="columns" style="gap: 12px;">
-            <div class="col" style="flex: 1 1 220px;">
-              <h4 style="margin: 0 0 8px 0;">Title</h4>
-              <div class="row">
-                <label>Размер (px):</label>
-                <input type="number" id="overlay-title-size" min="10" max="200" step="1" />
-              </div>
-              <div class="row">
-                <label>Цвет:</label>
-                <input type="color" id="overlay-title-color" />
-              </div>
-            </div>
-
-            <div class="col" style="flex: 1 1 220px;">
-              <h4 style="margin: 0 0 8px 0;">Pair</h4>
-              <div class="row">
-                <label>Размер (px):</label>
-                <input type="number" id="overlay-pair-size" min="10" max="200" step="1" />
-              </div>
-              <div class="row">
-                <label>Цвет:</label>
-                <input type="color" id="overlay-pair-color" />
-              </div>
-            </div>
-          </div>
         </div>
 
         <div class="col">
           <h4>Предпросмотр</h4>
           <p class="hint">Мини-превью реального оверлея (как в OBS Browser Source). Показывает сохранённые настройки.</p>
-          <div style="width: 100%; height: 140px; background: rgba(0,0,0,0.15); border-radius: 10px; overflow: hidden;">
+          <div style="width: 100%; aspect-ratio: 16 / 9; background: rgba(0,0,0,0.15); border-radius: 10px; overflow: hidden;">
             <iframe id="overlay-preview" src="/overlay.html?mode=current&preview=1&hideEmpty=0" style="width:100%;height:100%;border:0;"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="columns">
+        <div class="col">
+          <h4>Title</h4>
+          <div class="row">
+            <label>Размер (px):</label>
+            <input type="number" id="overlay-title-size" min="10" max="200" step="1" />
+          </div>
+          <div class="row">
+            <label>Цвет:</label>
+            <input type="color" id="overlay-title-color" />
+          </div>
+        </div>
+
+        <div class="col">
+          <h4>Pair</h4>
+          <div class="row">
+            <label>Размер (px):</label>
+            <input type="number" id="overlay-pair-size" min="10" max="200" step="1" />
+          </div>
+          <div class="row">
+            <label>Цвет:</label>
+            <input type="color" id="overlay-pair-color" />
           </div>
         </div>
       </div>
@@ -406,6 +406,220 @@
     </div>
   </div>
 
+  <div id="tab-operator" class="tab-content">
+    <div class="operator-shell">
+      <div class="operator-topbar">
+        <div class="operator-title">
+          <div class="operator-title-main">Operator Mode</div>
+          <div class="operator-title-sub">Touch-first экран для управления эфиром (iPad-friendly)</div>
+        </div>
+
+        <div class="operator-status">
+          <span class="operator-pill" id="op-obs-pill">OBS: <span id="op-obs-state">—</span></span>
+          <button class="operator-btn secondary" id="op-reconnect">Reconnect</button>
+        </div>
+      </div>
+
+      <div class="operator-tabs">
+        <button class="operator-tab-btn active" data-subtab="view">View</button>
+        <button class="operator-tab-btn" data-subtab="settings">Settings</button>
+      </div>
+
+      <div id="operator-subtab-view" class="operator-subtab active">
+        <div class="operator-grid">
+          <div class="operator-card operator-preview-card">
+            <div class="operator-card-header">
+              <div class="operator-card-title">ON AIR</div>
+              <div class="operator-card-meta">Program</div>
+            </div>
+            <div class="operator-preview" id="op-program-preview">
+              <div class="operator-preview-placeholder">Program preview</div>
+            </div>
+            <div class="operator-card-footer">
+              <div class="operator-kv">Scene: <span id="op-program-scene">—</span></div>
+              <div class="operator-kv">Updated: <span id="op-program-updated">—</span></div>
+            </div>
+          </div>
+
+          <div class="operator-card operator-preview-card">
+            <div class="operator-card-header">
+              <div class="operator-card-title">PREVIEW</div>
+              <div class="operator-card-meta">Studio Mode</div>
+            </div>
+            <div class="operator-preview" id="op-preview-preview">
+              <div class="operator-preview-placeholder">Preview</div>
+            </div>
+            <div class="operator-card-footer">
+              <div class="operator-kv">Scene: <span id="op-preview-scene">—</span></div>
+              <div class="operator-kv">Updated: <span id="op-preview-updated">—</span></div>
+            </div>
+          </div>
+
+          <div class="operator-card operator-controls-card">
+            <div class="operator-card-header">
+              <div class="operator-card-title">Controls</div>
+              <div class="operator-card-meta">Large buttons</div>
+            </div>
+
+            <div class="operator-controls-grid">
+              <button class="operator-btn" id="op-prev">Prev</button>
+              <button class="operator-btn" id="op-next">Next</button>
+              <button class="operator-btn primary" id="op-choose">Choose dancers</button>
+              <button class="operator-btn" id="op-clear">Clear</button>
+              <button class="operator-btn" id="op-hide">Hide</button>
+              <button class="operator-btn" id="op-apply">Apply to OBS</button>
+            </div>
+
+            <div class="operator-hint">На Этапе 1 кнопки не привязаны к логике. Это каркас UI.</div>
+          </div>
+
+          <div class="operator-card operator-history-card">
+            <div class="operator-card-header">
+              <div class="operator-card-title">History</div>
+              <div class="operator-card-meta">Undo / Redo</div>
+            </div>
+            <div class="operator-history" id="op-history">
+              <div class="operator-history-item current">(current) Jack &amp; Jill All Star Finals • Alex — Maria</div>
+              <div class="operator-history-item">Jack &amp; Jill All Star Finals • Alex (solo)</div>
+              <div class="operator-history-item">Advanced Finals • Mike — Kate</div>
+              <div class="operator-history-item">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="operator-modal-backdrop" id="op-modal-backdrop" aria-hidden="true">
+          <div class="operator-modal" role="dialog" aria-modal="true">
+            <div class="operator-modal-header">
+              <div class="operator-modal-title">Choose dancers</div>
+              <button class="operator-btn secondary" id="op-modal-close">Close</button>
+            </div>
+
+            <div class="operator-modal-body">
+              <div class="operator-form-row">
+                <label class="operator-label">Division (Finals only)</label>
+                <select class="operator-select" id="op-division-select">
+                  <option>Jack &amp; Jill All Star Finals</option>
+                  <option>Jack &amp; Jill Intermediate Finals</option>
+                  <option>Advanced Finals</option>
+                </select>
+              </div>
+
+              <div class="operator-form-row">
+                <label class="operator-checkbox">
+                  <input type="checkbox" id="op-without-pair" />
+                  Without partner
+                </label>
+              </div>
+
+              <div class="operator-dual">
+                <div class="operator-dual-col">
+                  <div class="operator-dual-title">LEADER</div>
+                  <input class="operator-input" placeholder="Search leader" />
+                  <div class="operator-list">
+                    <button class="operator-list-item selected" type="button">Alex Smith</button>
+                    <button class="operator-list-item" type="button">John Doe</button>
+                    <button class="operator-list-item" type="button">Mike Brown</button>
+                  </div>
+                </div>
+
+                <div class="operator-dual-col">
+                  <div class="operator-dual-title">FOLLOWER</div>
+                  <input class="operator-input" placeholder="Search follower" />
+                  <div class="operator-list">
+                    <button class="operator-list-item selected" type="button">Maria Ivanova</button>
+                    <button class="operator-list-item" type="button">Anna Petrova</button>
+                    <button class="operator-list-item" type="button">Kate Johnson</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="operator-selected">Selected: <span id="op-selected">Alex Smith — Maria Ivanova</span></div>
+            </div>
+
+            <div class="operator-modal-footer">
+              <button class="operator-btn" id="op-set-leader">SET LEADER NOW</button>
+              <button class="operator-btn" id="op-set-follower">SET FOLLOWER NOW</button>
+              <button class="operator-btn primary" id="op-set-both">SET BOTH</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="operator-subtab-settings" class="operator-subtab">
+        <div class="operator-settings-grid">
+          <div class="operator-card">
+            <div class="operator-card-header">
+              <div class="operator-card-title">OBS Connection</div>
+              <div class="operator-card-meta">WebSocket</div>
+            </div>
+
+            <div class="operator-form">
+              <div class="operator-form-row">
+                <label class="operator-label">Host</label>
+                <input class="operator-input" id="op-obs-host" placeholder="127.0.0.1" />
+              </div>
+              <div class="operator-form-row">
+                <label class="operator-label">Port</label>
+                <input class="operator-input" id="op-obs-port" placeholder="4455" />
+              </div>
+              <div class="operator-form-row">
+                <label class="operator-label">Password</label>
+                <input class="operator-input" id="op-obs-password" type="password" placeholder="••••••••" />
+              </div>
+
+              <div class="operator-actions">
+                <button class="operator-btn" id="op-test">Test connection</button>
+                <button class="operator-btn primary" id="op-save">Save</button>
+              </div>
+
+              <div class="operator-hint">На Этапе 1 это только UI. Подключение к OBS добавим в следующем этапе.</div>
+            </div>
+          </div>
+
+          <div class="operator-card">
+            <div class="operator-card-header">
+              <div class="operator-card-title">Screenshots</div>
+              <div class="operator-card-meta">Preview refresh</div>
+            </div>
+
+            <div class="operator-form">
+              <div class="operator-form-row">
+                <label class="operator-label">Update interval (sec)</label>
+                <input class="operator-input" id="op-shot-interval" type="number" min="0" step="0.5" value="1" />
+              </div>
+              <div class="operator-form-row">
+                <label class="operator-label">Quality (10..100)</label>
+                <input class="operator-input" id="op-shot-quality" type="number" min="10" max="100" step="1" value="70" />
+              </div>
+              <div class="operator-form-row">
+                <label class="operator-label">Resolution</label>
+                <select class="operator-select" id="op-shot-resolution">
+                  <option value="1280x720">1280×720</option>
+                  <option value="1920x1080">1920×1080</option>
+                  <option value="custom">Custom…</option>
+                </select>
+              </div>
+
+              <div class="operator-form-row">
+                <label class="operator-checkbox">
+                  <input type="checkbox" id="op-preview-only-studio" checked />
+                  Preview only if Studio Mode
+                </label>
+              </div>
+              <div class="operator-form-row">
+                <label class="operator-checkbox">
+                  <input type="checkbox" id="op-auto-refresh" checked />
+                  Auto-refresh screenshots
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
+  <script src="operator-ui.js"></script>
 </body>
 </html>
