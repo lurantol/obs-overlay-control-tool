@@ -1,0 +1,8 @@
+{
+  "titleFontFamily": "system-ui",
+  "pairFontFamily": "system-ui",
+  "titleSizePx": 48,
+  "pairSizePx": 40,
+  "titleColor": "#ffffff",
+  "pairColor": "#ffffff"
+}

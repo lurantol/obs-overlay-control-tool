@@ -1,0 +1,11 @@
+{
+  "obsHost": "localhost",
+  "obsPort": 4455,
+  "obsPassword": "",
+  "screenshotIntervalSec": 1,
+  "screenshotQuality": 70,
+  "screenshotWidth": 1280,
+  "screenshotHeight": 720,
+  "previewOnlyIfStudioMode": true,
+  "autoRefreshScreenshots": true
+}

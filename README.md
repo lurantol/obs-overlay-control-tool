@@ -60,32 +60,55 @@
 
 ---
 
-## Operator Mode (новая вкладка)
+## Operator Mode (пульт для iPad)
 
-С версии **Stage 1** добавлена вкладка **Operator Mode**. Это отдельный "пульт" под iPad (touch-first) для работы во время эфира.
+С версии **Stage 2** добавлен **Operator Mode** — отдельный touch-first экран для оператора трансляции.
 
-**Важно:** на Этапе 1 вкладка содержит только UI-каркас и дизайн. Подключение к OBS, история, выбор танцоров и остальной функционал будут добавлены следующими этапами.
+Доступные варианты открытия:
+- внутри основной админки (вкладка **Operator Mode**)
+- отдельной страницей (рекомендуется для iPad):
+  - `http://<IP_Мака>:3000/operator`
+
+В админке есть кнопка **Open in new tab**, которая открывает `/operator` в новой вкладке.
 
 ### Operator Mode → View
 
-- Два превью-блока:
-  - **ON AIR (Program)**
-  - **PREVIEW (Studio Mode)**
-- Блок больших кнопок управления (макет):
-  - Prev / Next
-  - Choose dancers
-  - Clear / Apply (плейсхолдер)
-- Блок **History** (плейсхолдер)
-- Статус **OBS** (плейсхолдер)
+На View отображается:
+- **ON AIR (Program)** — скриншот текущего Program
+- **PREVIEW** — скриншот Preview (если включен Studio Mode)
+- статус OBS WebSocket (Connected / Stale / Disconnected)
+
+Кнопки управления и History на Stage 2 визуально готовы, но логика (история, выбор танцоров, apply) будет добавляться следующими этапами.
 
 ### Operator Mode → Settings
 
-- OBS Connection:
-  - Host / Port / Password
-  - Test connection / Save (на Этапе 1 без логики)
-- Screenshots:
-  - interval / quality / resolution
-  - toggles (Preview only if Studio Mode, Auto-refresh)
+#### OBS Connection (OBS 32.0.4)
+В OBS 32 WebSocket уже встроен, плагин не нужен.
+
+1) В OBS открой:
+   - **Tools → WebSocket Server Settings**
+2) Включи сервер (Enable)
+3) Порт по умолчанию: **4455**
+4) Установи пароль (рекомендуется) и сохрани
+
+Далее в Operator Mode → Settings:
+- **Host**: обычно `localhost` (если приложение на той же машине, что и OBS)
+- **Port**: `4455`
+- **Password**: как в OBS
+
+Кнопка **Test connection**:
+- подключается к OBS
+- показывает результат и Studio Mode статус
+
+Кнопка **Reconnect** (вверху): переподключает OBS WebSocket.
+
+#### Screenshots
+Настройки обновления превью:
+- **Update interval (sec)** — как часто обновлять превью (рекомендуется 1–2 сек)
+- **Quality (10..100)** — качество JPG (70–80 обычно достаточно)
+- **Resolution** — размер скриншота (1280×720 обычно комфортно)
+- **Preview only if Studio Mode** — если включено, Preview будет пустым, когда Studio Mode выключен
+- **Auto-refresh screenshots** — автообновление превью
 
 ---
 

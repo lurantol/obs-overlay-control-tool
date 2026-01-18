@@ -8,6 +8,14 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const { parse } = require('csv-parse/sync');
 const crypto = require('crypto');
+let OBSWebSocket;
+try {
+  // obs-websocket-js v5 uses default export in some bundlers
+  const mod = require('obs-websocket-js');
+  OBSWebSocket = mod.default || mod;
+} catch {
+  OBSWebSocket = null;
+}
 
 const app = express();
 const PORT = 3000;
@@ -21,6 +29,8 @@ const contestParticipantsPath = path.join(dataDir, 'contest-participants.json');
 const roundsButtonsPath = path.join(dataDir, 'round-buttons.json');
 const specialsPath = path.join(dataDir, 'specials.json');
 const overlaySettingsPath = path.join(dataDir, 'overlay-settings.json');
+
+const operatorSettingsPath = path.join(dataDir, 'operator-settings.json');
 
 // Custom fonts for Browser Overlay
 const fontsDir = path.join(__dirname, 'public', 'fonts');
@@ -53,6 +63,26 @@ let overlaySettings = {
   pairColor: '#ffffff'
 };
 
+// Operator Mode settings (Stage 2)
+let operatorSettings = {
+  obsHost: 'localhost',
+  obsPort: 4455,
+  obsPassword: '',
+  screenshotIntervalSec: 1,
+  screenshotQuality: 70,
+  screenshotWidth: 1280,
+  screenshotHeight: 720,
+  previewOnlyIfStudioMode: true,
+  autoRefreshScreenshots: true
+};
+
+// OBS connection state
+const obs = (OBSWebSocket ? new OBSWebSocket() : null);
+let obsConnected = false;
+let obsLastOkAt = 0;
+let obsLastErrorAt = 0;
+let obsLastErrorMessage = '';
+
 // Import staging (single-user local; resets on server restart)
 let importStash = new Map(); // token -> { ext, rows, headers, uploadedAt }
 
@@ -81,6 +111,152 @@ function readTextFileSafe(p) {
   }
 }
 
+// -------------------------
+// OBS WebSocket (Stage 2)
+// -------------------------
+if (obs) {
+  obs.on('ConnectionClosed', () => {
+    obsConnected = false;
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = 'Connection closed';
+  });
+  obs.on('error', (err) => {
+    obsConnected = false;
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = String(err?.message || err || 'OBS error');
+  });
+}
+
+function getObsWsUrl() {
+  const host = operatorSettings.obsHost || 'localhost';
+  const port = operatorSettings.obsPort || 4455;
+  return `ws://${host}:${port}`;
+}
+
+async function ensureObsConnected() {
+  if (!obs) {
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = 'obs-websocket-js is not installed';
+    return { ok: false, error: obsLastErrorMessage };
+  }
+  if (obsConnected) return { ok: true };
+  try {
+    const url = getObsWsUrl();
+    await obs.connect(url, operatorSettings.obsPassword || undefined);
+    obsConnected = true;
+    obsLastOkAt = Date.now();
+    obsLastErrorMessage = '';
+    return { ok: true };
+  } catch (e) {
+    obsConnected = false;
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = String(e?.message || e || 'Failed to connect');
+    return { ok: false, error: obsLastErrorMessage };
+  }
+}
+
+async function getStudioModeEnabled() {
+  const c = await ensureObsConnected();
+  if (!c.ok) return { ok: false, error: c.error };
+  try {
+    const r = await obs.call('GetStudioModeEnabled');
+    obsLastOkAt = Date.now();
+    return { ok: true, studioModeEnabled: Boolean(r.studioModeEnabled) };
+  } catch (e) {
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = String(e?.message || e || 'GetStudioModeEnabled failed');
+    return { ok: false, error: obsLastErrorMessage };
+  }
+}
+
+function decodeObsImageData(imageData) {
+  // imageData is a dataURL: data:image/jpeg;base64,....
+  const s = String(imageData || '');
+  const idx = s.indexOf('base64,');
+  if (idx === -1) return null;
+  const b64 = s.slice(idx + 'base64,'.length);
+  try {
+    return Buffer.from(b64, 'base64');
+  } catch {
+    return null;
+  }
+}
+
+async function getSceneScreenshot(sceneName) {
+  const c = await ensureObsConnected();
+  if (!c.ok) return { ok: false, error: c.error };
+  try {
+    const r = await obs.call('GetSourceScreenshot', {
+      sourceName: sceneName,
+      imageFormat: 'jpg',
+      imageWidth: operatorSettings.screenshotWidth,
+      imageHeight: operatorSettings.screenshotHeight,
+      imageCompressionQuality: operatorSettings.screenshotQuality,
+    });
+    obsLastOkAt = Date.now();
+    const buf = decodeObsImageData(r.imageData);
+    if (!buf) return { ok: false, error: 'Failed to decode screenshot' };
+    return { ok: true, buffer: buf };
+  } catch (e) {
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = String(e?.message || e || 'GetSourceScreenshot failed');
+    return { ok: false, error: obsLastErrorMessage };
+  }
+}
+
+async function getProgramInfoAndScreenshot() {
+  const c = await ensureObsConnected();
+  if (!c.ok) return { ok: false, error: c.error };
+  try {
+    const r = await obs.call('GetCurrentProgramScene');
+    obsLastOkAt = Date.now();
+    const scene = r.currentProgramSceneName || r.currentProgramSceneName === '' ? r.currentProgramSceneName : r.sceneName;
+    const ss = await getSceneScreenshot(scene);
+    if (!ss.ok) return { ok: false, error: ss.error };
+    return { ok: true, sceneName: scene, buffer: ss.buffer };
+  } catch (e) {
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = String(e?.message || e || 'GetCurrentProgramScene failed');
+    return { ok: false, error: obsLastErrorMessage };
+  }
+}
+
+async function getPreviewInfoAndScreenshot() {
+  const studio = await getStudioModeEnabled();
+  if (!studio.ok) return { ok: false, error: studio.error };
+  if (!studio.studioModeEnabled && operatorSettings.previewOnlyIfStudioMode) {
+    return { ok: true, studioModeEnabled: false, noPreview: true };
+  }
+  const c = await ensureObsConnected();
+  if (!c.ok) return { ok: false, error: c.error };
+  if (!studio.studioModeEnabled) {
+    // Studio mode disabled but user still wants preview -> show current program as preview fallback
+    const prog = await getProgramInfoAndScreenshot();
+    if (!prog.ok) return { ok: false, error: prog.error };
+    return { ok: true, studioModeEnabled: false, sceneName: prog.sceneName, buffer: prog.buffer };
+  }
+  try {
+    const r = await obs.call('GetCurrentPreviewScene');
+    obsLastOkAt = Date.now();
+    const scene = r.currentPreviewSceneName || r.sceneName;
+    const ss = await getSceneScreenshot(scene);
+    if (!ss.ok) return { ok: false, error: ss.error };
+    return { ok: true, studioModeEnabled: true, sceneName: scene, buffer: ss.buffer };
+  } catch (e) {
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = String(e?.message || e || 'GetCurrentPreviewScene failed');
+    return { ok: false, error: obsLastErrorMessage };
+  }
+}
+
+async function disconnectObs() {
+  if (!obs) return;
+  try {
+    await obs.disconnect();
+  } catch {}
+  obsConnected = false;
+}
+
 function initData() {
   participants = loadJson(participantsPath, []);
   contests = loadJson(contestsPath, []);
@@ -98,6 +274,11 @@ function initData() {
   overlaySettings = normalizeOverlaySettings(loadedOverlaySettings);
   saveJson(overlaySettingsPath, overlaySettings);
 
+  // Operator settings
+  const loadedOperatorSettings = loadJson(operatorSettingsPath, operatorSettings);
+  operatorSettings = normalizeOperatorSettings(loadedOperatorSettings);
+  saveJson(operatorSettingsPath, operatorSettings);
+
   // Custom fonts
   if (!fs.existsSync(fontsDir)) fs.mkdirSync(fontsDir, { recursive: true });
   customFonts = loadJson(fontsDbPath, []);
@@ -110,6 +291,20 @@ function initData() {
   regenerateFontsCss();
 
   console.log(`Loaded ${participants.length} participants, ${contests.length} contests`);
+}
+
+function normalizeOperatorSettings(input) {
+  const s = (input && typeof input === 'object') ? input : {};
+  const obsHost = String(s.obsHost ?? operatorSettings.obsHost).trim() || operatorSettings.obsHost;
+  const obsPort = clampInt(s.obsPort ?? operatorSettings.obsPort, 1, 65535, operatorSettings.obsPort);
+  const obsPassword = String(s.obsPassword ?? operatorSettings.obsPassword);
+  const screenshotIntervalSec = clampInt(s.screenshotIntervalSec ?? operatorSettings.screenshotIntervalSec, 1, 30, operatorSettings.screenshotIntervalSec);
+  const screenshotQuality = clampInt(s.screenshotQuality ?? operatorSettings.screenshotQuality, 1, 100, operatorSettings.screenshotQuality);
+  const screenshotWidth = clampInt(s.screenshotWidth ?? operatorSettings.screenshotWidth, 320, 3840, operatorSettings.screenshotWidth);
+  const screenshotHeight = clampInt(s.screenshotHeight ?? operatorSettings.screenshotHeight, 240, 2160, operatorSettings.screenshotHeight);
+  const previewOnlyIfStudioMode = Boolean(s.previewOnlyIfStudioMode ?? operatorSettings.previewOnlyIfStudioMode);
+  const autoRefreshScreenshots = Boolean(s.autoRefreshScreenshots ?? operatorSettings.autoRefreshScreenshots);
+  return { obsHost, obsPort, obsPassword, screenshotIntervalSec, screenshotQuality, screenshotWidth, screenshotHeight, previewOnlyIfStudioMode, autoRefreshScreenshots };
 }
 
 function normalizeOverlaySettings(input) {
@@ -301,6 +496,19 @@ function parseParticipantsFromRows(rows, numberCol, nameCol, leaderParity = 'odd
 // Express
 app.use(cors());
 app.use(express.json());
+
+// Operator Mode standalone page (for iPad)
+app.get('/operator', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'operator.html'));
+});
+
+// Avoid aggressive caching for uploaded fonts (OBS Browser Source can cache hard)
+app.use('/fonts', express.static(path.join(__dirname, 'public', 'fonts'), {
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+}));
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API: current overlay state (for Browser Source)
@@ -322,6 +530,77 @@ app.post('/api/overlay-settings', (req, res) => {
   overlaySettings = normalizeOverlaySettings(req.body);
   saveJson(overlaySettingsPath, overlaySettings);
   res.json({ ok: true, overlaySettings });
+});
+
+// -------------------------
+// Operator Mode API (Stage 2)
+// -------------------------
+app.get('/api/operator/settings', (req, res) => {
+  res.json(operatorSettings);
+});
+
+app.post('/api/operator/settings', (req, res) => {
+  operatorSettings = normalizeOperatorSettings(req.body);
+  saveJson(operatorSettingsPath, operatorSettings);
+  res.json({ ok: true, operatorSettings });
+});
+
+app.post('/api/operator/test-connection', async (req, res) => {
+  // Optional one-off override in body
+  if (req.body && typeof req.body === 'object' && Object.keys(req.body).length) {
+    operatorSettings = normalizeOperatorSettings({ ...operatorSettings, ...req.body });
+    saveJson(operatorSettingsPath, operatorSettings);
+  }
+  const r = await ensureObsConnected();
+  if (!r.ok) return res.status(500).json({ ok: false, error: r.error });
+  const studio = await getStudioModeEnabled();
+  res.json({ ok: true, studioModeEnabled: studio.ok ? studio.studioModeEnabled : false });
+});
+
+app.post('/api/operator/reconnect', async (req, res) => {
+  await disconnectObs();
+  const r = await ensureObsConnected();
+  if (!r.ok) return res.status(500).json({ ok: false, error: r.error });
+  res.json({ ok: true });
+});
+
+app.get('/api/operator/obs-status', async (req, res) => {
+  const now = Date.now();
+  const staleMs = (operatorSettings.screenshotIntervalSec * 1000 * 3) || 3000;
+  const isStale = obsConnected && obsLastOkAt && (now - obsLastOkAt > staleMs);
+  let studioModeEnabled = false;
+  if (obsConnected) {
+    const studio = await getStudioModeEnabled();
+    if (studio.ok) studioModeEnabled = studio.studioModeEnabled;
+  }
+  res.json({
+    obsAvailable: Boolean(obs),
+    connected: obsConnected,
+    stale: Boolean(isStale),
+    lastOkAt: obsLastOkAt,
+    lastErrorAt: obsLastErrorAt,
+    lastErrorMessage: obsLastErrorMessage,
+    studioModeEnabled
+  });
+});
+
+app.get('/api/operator/program.jpg', async (req, res) => {
+  const r = await getProgramInfoAndScreenshot();
+  if (!r.ok) return res.status(503).json({ ok: false, error: r.error });
+  res.setHeader('Content-Type', 'image/jpeg');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-OBS-Scene', encodeURIComponent(r.sceneName || ''));
+  res.send(r.buffer);
+});
+
+app.get('/api/operator/preview.jpg', async (req, res) => {
+  const r = await getPreviewInfoAndScreenshot();
+  if (!r.ok) return res.status(503).json({ ok: false, error: r.error });
+  if (r.noPreview) return res.status(204).end();
+  res.setHeader('Content-Type', 'image/jpeg');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-OBS-Scene', encodeURIComponent(r.sceneName || ''));
+  res.send(r.buffer);
 });
 
 // API: fonts for Browser Overlay
