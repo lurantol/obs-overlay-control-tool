@@ -8,39 +8,13 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const { parse } = require('csv-parse/sync');
 const crypto = require('crypto');
-// OBS websocket client is loaded lazily via dynamic import.
-// Reason: obs-websocket-js v5 is ESM-only and cannot be loaded via require() in CommonJS.
-let obsClient = null;
-let obsLibLoaded = false;
-let obsLibLoadError = '';
-
-async function getObsClient() {
-  if (obsClient) return { ok: true, client: obsClient };
-  if (obsLibLoadError) return { ok: false, error: obsLibLoadError };
-  try {
-    const mod = await import('obs-websocket-js');
-    const OBSWebSocket = mod?.default || mod;
-    obsClient = new OBSWebSocket();
-    obsLibLoaded = true;
-
-    // Wire connection lifecycle events
-    obsClient.on('ConnectionClosed', () => {
-      obsConnected = false;
-      obsLastErrorAt = Date.now();
-      obsLastErrorMessage = 'Connection closed';
-    });
-    obsClient.on('error', (err) => {
-      obsConnected = false;
-      obsLastErrorAt = Date.now();
-      obsLastErrorMessage = String(err?.message || err || 'OBS error');
-    });
-
-    return { ok: true, client: obsClient };
-  } catch (e) {
-    obsLibLoaded = false;
-    obsLibLoadError = String(e?.message || e || 'Failed to load obs-websocket-js');
-    return { ok: false, error: obsLibLoadError };
-  }
+let OBSWebSocket;
+try {
+  // obs-websocket-js v5 uses default export in some bundlers
+  const mod = require('obs-websocket-js');
+  OBSWebSocket = mod.default || mod;
+} catch {
+  OBSWebSocket = null;
 }
 
 const app = express();
@@ -132,7 +106,7 @@ let presets = [];
 
 
 // OBS connection state
-let obs = null;
+const obs = (OBSWebSocket ? new OBSWebSocket() : null);
 let obsConnected = false;
 let obsLastOkAt = 0;
 let obsLastErrorAt = 0;
@@ -169,6 +143,18 @@ function readTextFileSafe(p) {
 // -------------------------
 // OBS WebSocket (Stage 2)
 // -------------------------
+if (obs) {
+  obs.on('ConnectionClosed', () => {
+    obsConnected = false;
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = 'Connection closed';
+  });
+  obs.on('error', (err) => {
+    obsConnected = false;
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = String(err?.message || err || 'OBS error');
+  });
+}
 
 function getObsWsUrl() {
   const host = operatorSettings.obsHost || 'localhost';
@@ -177,13 +163,11 @@ function getObsWsUrl() {
 }
 
 async function ensureObsConnected() {
-  const loaded = await getObsClient();
-  if (!loaded.ok) {
+  if (!obs) {
     obsLastErrorAt = Date.now();
-    obsLastErrorMessage = loaded.error || 'obs-websocket-js is not available';
+    obsLastErrorMessage = 'obs-websocket-js is not installed';
     return { ok: false, error: obsLastErrorMessage };
   }
-  obs = loaded.client;
   if (obsConnected) return { ok: true };
   try {
     const url = getObsWsUrl();
@@ -295,14 +279,9 @@ async function getPreviewInfoAndScreenshot() {
 }
 
 async function disconnectObs() {
-  // If client has never been loaded, nothing to disconnect.
-  if (!obsClient && !obs) {
-    obsConnected = false;
-    return;
-  }
-  const client = obs || obsClient;
+  if (!obs) return;
   try {
-    await client.disconnect();
+    await obs.disconnect();
   } catch {}
   obsConnected = false;
 }
@@ -762,13 +741,6 @@ app.post("/api/operator/redo", (req, res) => {
 });
 
 app.post("/api/operator/clear", (req, res) => {
-  // Clear ONLY the current pair. Keep title/division as-is.
-  setOverlayStateAndApply({ leader: "", follower: "", withoutPair: false });
-  res.json({ ok: true, state: overlayState });
-});
-
-// Full reset (title + pair). Keep as a separate action to avoid accidental wipes during the stream.
-app.post("/api/operator/reset-all", (req, res) => {
   setOverlayStateAndApply({ title: "", leader: "", follower: "", divisionId: "", withoutPair: false, hidden: false });
   res.json({ ok: true, state: overlayState });
 });
@@ -855,11 +827,6 @@ app.post('/api/operator/reconnect', async (req, res) => {
 });
 
 app.get('/api/operator/obs-status', async (req, res) => {
-  // Load obs-websocket-js lazily so the UI can distinguish between
-  // missing dependency and just-not-connected-yet.
-  const loaded = await getObsClient();
-  const obsAvailable = Boolean(loaded.ok);
-  if (loaded.ok) obs = loaded.client;
   const now = Date.now();
   const staleMs = (operatorSettings.screenshotIntervalSec * 1000 * 3) || 3000;
   const isStale = obsConnected && obsLastOkAt && (now - obsLastOkAt > staleMs);
@@ -869,7 +836,7 @@ app.get('/api/operator/obs-status', async (req, res) => {
     if (studio.ok) studioModeEnabled = studio.studioModeEnabled;
   }
   res.json({
-    obsAvailable: obsAvailable,
+    obsAvailable: Boolean(obs),
     connected: obsConnected,
     stale: Boolean(isStale),
     lastOkAt: obsLastOkAt,

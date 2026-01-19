@@ -416,6 +416,20 @@
     await refreshOverlayState();
   }
 
+  async function actionResetAll() {
+    try { await apiPost('/api/operator/reset-all', {}); } catch {}
+    // keep local selection, but clear local picks
+    if (withoutPairEl) withoutPairEl.checked = false;
+    selected.withoutPair = false;
+    selected.leaderNumber = null;
+    selected.followerNumber = null;
+    selected.leaderName = '';
+    selected.followerName = '';
+    renderLists();
+    await refreshHistory();
+    await refreshOverlayState();
+  }
+
   async function actionUndo() {
     try { await apiPost('/api/operator/undo', {}); } catch {}
     await refreshHistory();
@@ -427,7 +441,15 @@
     await refreshOverlayState();
   }
   async function actionClear() {
+    // Clear ONLY the pair on-air (title stays).
     try { await apiPost('/api/operator/clear', {}); } catch {}
+    if (withoutPairEl) withoutPairEl.checked = false;
+    selected.withoutPair = false;
+    selected.leaderNumber = null;
+    selected.followerNumber = null;
+    selected.leaderName = '';
+    selected.followerName = '';
+    renderLists();
     await refreshHistory();
     await refreshOverlayState();
   }
@@ -591,13 +613,27 @@
       // reset picks if not present in new list
       selected.leaderNumber = null; selected.followerNumber = null;
       selected.leaderName = ''; selected.followerName = '';
+      if (withoutPairEl) withoutPairEl.checked = false;
+      selected.withoutPair = false;
       renderLists();
+      // Variant A: when division changes, apply the division title immediately and clear the pair.
+      // This makes the division "hang" on-air while pairs rotate underneath.
+      apiPost('/api/operator/set', {
+        action: 'clearPair',
+        divisionId: selected.divisionId,
+        withoutPair: false,
+        leaderNumber: null,
+        followerNumber: null
+      }).then(() => {
+        refreshHistory();
+        refreshOverlayState();
+      }).catch(() => {});
     });
   }
   if (withoutPairEl) withoutPairEl.addEventListener('change', updateSelectedText);
 
   if (btnSwap) btnSwap.addEventListener('click', swap);
-  if (btnCleanPair) btnCleanPair.addEventListener('click', actionCleanPair);
+  if (btnCleanPair) btnCleanPair.addEventListener('click', actionResetAll);
 
   if (btnApplyLeader) btnApplyLeader.addEventListener('click', () => applySelection('setLeader'));
   if (btnApplyFollower) btnApplyFollower.addEventListener('click', () => applySelection('setFollower'));
