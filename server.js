@@ -348,6 +348,24 @@ async function setObsScene(sceneName, target) {
   }
 }
 
+async function triggerObsTransition() {
+  const studio = await getStudioModeEnabled();
+  if (!studio.ok) return { ok: false, error: studio.error };
+  if (!studio.studioModeEnabled) return { ok: false, error: 'Studio mode is disabled' };
+
+  const c = await ensureObsConnected();
+  if (!c.ok) return { ok: false, error: c.error };
+  try {
+    await obs.call('TriggerStudioModeTransition');
+    obsLastOkAt = Date.now();
+    return { ok: true };
+  } catch (e) {
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = String(e?.message || e || 'Transition failed');
+    return { ok: false, error: obsLastErrorMessage };
+  }
+}
+
 async function disconnectObs() {
   // If client has never been loaded, nothing to disconnect.
   if (!obsClient && !obs) {
@@ -953,6 +971,12 @@ app.post('/api/operator/switch-scene', async (req, res) => {
   const r = await setObsScene(sceneName, target);
   if (!r.ok) return res.status(500).json({ ok: false, error: r.error });
   res.json({ ok: true, target: r.target });
+});
+
+app.post('/api/operator/transition', async (req, res) => {
+  const r = await triggerObsTransition();
+  if (!r.ok) return res.status(500).json({ ok: false, error: r.error });
+  res.json({ ok: true });
 });
 
 app.get('/api/operator/program.jpg', async (req, res) => {

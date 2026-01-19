@@ -178,6 +178,16 @@
     }
   }
 
+  async function triggerTransition() {
+    try {
+      await apiPost('/api/operator/transition', {});
+      // refresh state for highlighting
+      setTimeout(loadScenes, 150);
+    } catch (e) {
+      if (hintEl) hintEl.textContent = String(e?.message || e || 'Failed to transition');
+    }
+  }
+
   function renderSceneHotkeys() {
     if (!sceneHotkeysEl) return;
     // Show only when studio mode is enabled (user requested to place under Preview in studio mode)
@@ -199,6 +209,13 @@
       btn.addEventListener('click', () => switchSceneByIndex(i));
       sceneHotkeysEl.appendChild(btn);
     }
+
+    const transitionBtn = document.createElement('button');
+    transitionBtn.className = 'operator-scene-transition';
+    transitionBtn.type = 'button';
+    transitionBtn.textContent = 'Transition';
+    transitionBtn.addEventListener('click', triggerTransition);
+    sceneHotkeysEl.appendChild(transitionBtn);
   }
 
   function escapeHtml(s) {
@@ -741,6 +758,11 @@
       if (!studioModeEnabled) return;
       if (isTypingInField(e)) return;
       const k = String(e.key || '');
+      if (k === 't' || k === 'T') {
+        e.preventDefault();
+        triggerTransition();
+        return;
+      }
       if (!/^[1-5]$/.test(k)) return;
       const idx = parseInt(k, 10) - 1;
       if (!Number.isFinite(idx)) return;
