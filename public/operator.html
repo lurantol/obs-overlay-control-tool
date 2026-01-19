@@ -11,8 +11,7 @@
     <div class="operator-topbar">
       <div class="operator-title">
         <div class="operator-title-main">Operator Mode</div>
-        <div class="operator-title-sub">Отдельная страница для iPad: /operator</div>
-      </div>
+              </div>
 
       <div class="operator-status">
         <a class="operator-btn secondary" href="/" rel="noopener noreferrer">Back to Admin</a>
@@ -62,6 +61,11 @@
             <div class="operator-card-meta">Large buttons</div>
           </div>
 
+          <div class="operator-controls-current">
+            <div class="operator-controls-current-label">Title:</div>
+            <div class="operator-controls-current-value" id="op-current-title">—</div>
+          </div>
+
           <div class="operator-controls-grid">
             <button class="operator-btn" id="op-prev">Prev</button>
             <button class="operator-btn" id="op-next">Next</button>
@@ -71,8 +75,7 @@
             <button class="operator-btn" id="op-apply">Apply to OBS</button>
           </div>
 
-          <div class="operator-hint">Этап 2: OBS status + screenshots подключены. Остальная логика появится в следующих этапах.</div>
-        </div>
+                  </div>
 
         <div class="operator-card operator-history-card">
           <div class="operator-card-header">
@@ -89,7 +92,6 @@
         <div class="operator-modal" role="dialog" aria-modal="true">
           <div class="operator-modal-header">
             <div class="operator-modal-title">Choose dancers</div>
-            <button class="operator-btn secondary" id="op-modal-close">Close</button>
           </div>
 
           <div class="operator-modal-body">
@@ -112,7 +114,7 @@
                 <div class="operator-dual-title">LEADER</div>
                 <input class="operator-input" id="op-leader-search" placeholder="Search leader" />
                 <div class="operator-list" id="op-leader-list">
-                  <div class="operator-list-empty">(UI only)</div>
+                  <div class="operator-list-empty">Выберите номинацию</div>
                 </div>
               </div>
 
@@ -120,7 +122,7 @@
                 <div class="operator-dual-title">FOLLOWER</div>
                 <input class="operator-input" id="op-follower-search" placeholder="Search follower" />
                 <div class="operator-list" id="op-follower-list">
-                  <div class="operator-list-empty">(UI only)</div>
+                  <div class="operator-list-empty">Выберите номинацию</div>
                 </div>
               </div>
             </div>
@@ -133,6 +135,7 @@
           <div class="operator-modal-footer">
             <button class="operator-btn" id="op-modal-cancel">Cancel</button>
             <button class="operator-btn" id="op-swap">Swap</button>
+            <button class="operator-btn warn" id="op-clean-pair">Clean pair</button>
             <button class="operator-btn" id="op-apply-leader">Apply leader</button>
             <button class="operator-btn" id="op-apply-follower">Apply follower</button>
             <button class="operator-btn primary" id="op-apply-both">Apply pair</button>

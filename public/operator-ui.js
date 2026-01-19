@@ -24,7 +24,6 @@
 
   // Modal
   const openBtn = $('op-choose');
-  const closeBtn = $('op-modal-close');
   const cancelBtn = $('op-modal-cancel');
   const modal = $('op-modal-backdrop');
 
@@ -41,9 +40,8 @@
   if (openBtn) openBtn.addEventListener('click', () => {
     openModal();
     // lazy load data each time
-    loadFinals().catch(() => {});
+    loadFinals();
   });
-  if (closeBtn) closeBtn.addEventListener('click', closeModal);
   if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
   if (modal) {
     modal.addEventListener('click', (e) => {
@@ -96,9 +94,12 @@
   const followerListEl = $('op-follower-list');
   const selectedPairEl = $('op-selected-pair');
   const btnSwap = $('op-swap');
+  const btnCleanPair = $('op-clean-pair');
   const btnApplyLeader = $('op-apply-leader');
   const btnApplyFollower = $('op-apply-follower');
   const btnApplyBoth = $('op-apply-both');
+
+  const currentTitleEl = $('op-current-title');
 
   const historyEl = $('op-history');
 
@@ -333,10 +334,13 @@
       historyEl.innerHTML = '<div class="operator-history-item">—</div>';
       return;
     }
-    const html = items
-      .slice(Math.max(0, items.length - 25))
-      .map((it, iOff) => {
-        const i = items.length - Math.min(items.length, 25) + iOff;
+    const visible = items.slice(Math.max(0, items.length - 25));
+    const start = items.length - visible.length;
+    const html = visible
+      .slice()
+      .reverse()
+      .map((it, j) => {
+        const i = start + (visible.length - 1 - j);
         const active = i === index;
         const t = (it.hidden ? '[HIDDEN] ' : '') + (it.title || '(no title)');
         const p = it.withoutPair ? (it.leader || it.follower || '') : ((it.leader && it.follower) ? `${it.leader} — ${it.follower}` : (it.leader || it.follower || ''));
@@ -368,7 +372,32 @@
       if (btnHide) {
         btnHide.textContent = lastOverlayState?.hidden ? 'Show' : 'Hide';
       }
+      if (currentTitleEl) {
+        currentTitleEl.textContent = (lastOverlayState?.title || '—');
+      }
     } catch {}
+  }
+
+  async function actionCleanPair() {
+    try {
+      await apiPost('/api/operator/set', {
+        action: 'clearPair',
+        divisionId: selected.divisionId,
+        withoutPair: false,
+        leaderNumber: null,
+        followerNumber: null
+      });
+      // keep division selected, but reset local picks
+      if (withoutPairEl) withoutPairEl.checked = false;
+      selected.withoutPair = false;
+      selected.leaderNumber = null;
+      selected.followerNumber = null;
+      selected.leaderName = '';
+      selected.followerName = '';
+      renderLists();
+    } catch {}
+    await refreshHistory();
+    await refreshOverlayState();
   }
 
   async function actionUndo() {
@@ -411,16 +440,45 @@
   }
 
   async function loadFinals() {
-    const r = await apiGet('/api/operator/finals');
-    finals = Array.isArray(r.finals) ? r.finals : [];
+    // NOTE: historically errors were silently swallowed. For operator work during live stream
+    // it's better to surface a minimal hint directly in the modal.
+    try {
+      const r = await apiGet('/api/operator/finals');
+      finals = Array.isArray(r.finals) ? r.finals : [];
 
-    if (divisionSelect) {
-      divisionSelect.innerHTML = finals.map(f => `<option value="${escapeHtml(f.id)}">${escapeHtml(f.name)}</option>`).join('');
-      if (!selected.divisionId && finals[0]) selected.divisionId = finals[0].id;
-      divisionSelect.value = selected.divisionId || (finals[0]?.id || '');
+      if (divisionSelect) {
+        if (finals.length === 0) {
+          divisionSelect.innerHTML = '<option value="" disabled>(no finals)</option>';
+          divisionSelect.value = '';
+          divisionSelect.disabled = true;
+          selected.divisionId = '';
+        } else {
+          divisionSelect.disabled = false;
+          divisionSelect.innerHTML = finals
+            .map(f => `<option value="${escapeHtml(f.id)}">${escapeHtml(f.name)}</option>`)
+            .join('');
+
+          // keep selection if still present
+          if (!selected.divisionId || !finals.some(f => f.id === selected.divisionId)) {
+            selected.divisionId = finals[0].id;
+          }
+          divisionSelect.value = selected.divisionId;
+        }
+      }
+
+      renderLists();
+    } catch (e) {
+      finals = [];
+      selected.divisionId = '';
+      if (divisionSelect) {
+        divisionSelect.innerHTML = '<option value="" disabled>(failed to load finals)</option>';
+        divisionSelect.value = '';
+        divisionSelect.disabled = true;
+      }
+      if (leaderListEl) leaderListEl.innerHTML = '<div class="operator-list-empty">Ошибка загрузки финалов</div>';
+      if (followerListEl) followerListEl.innerHTML = '<div class="operator-list-empty">Ошибка загрузки финалов</div>';
+      updateSelectedText();
     }
-
-    renderLists();
   }
 
   function getCurrentFinal() {
@@ -502,6 +560,11 @@
     if (selectedPairEl) {
       selectedPairEl.textContent = title ? `${title}: ${pairText || '—'}` : (pairText || '—');
     }
+
+    // Also show current division title in Controls panel (even outside modal)
+    if (currentTitleEl) {
+      currentTitleEl.textContent = title || (lastOverlayState?.title || '—');
+    }
   }
 
   function swap() {
@@ -531,6 +594,7 @@
   if (withoutPairEl) withoutPairEl.addEventListener('change', updateSelectedText);
 
   if (btnSwap) btnSwap.addEventListener('click', swap);
+  if (btnCleanPair) btnCleanPair.addEventListener('click', actionCleanPair);
 
   if (btnApplyLeader) btnApplyLeader.addEventListener('click', () => applySelection('setLeader'));
   if (btnApplyFollower) btnApplyFollower.addEventListener('click', () => applySelection('setFollower'));
@@ -548,6 +612,8 @@
 
   // init
   loadSettings().finally(() => {
+    // Preload finals so division list is ready even before opening the modal.
+    loadFinals();
     refreshStatus();
     setInterval(refreshStatus, 2000);
     refreshHistory();

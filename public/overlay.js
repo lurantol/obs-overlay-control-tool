@@ -73,17 +73,26 @@
 
     // Pair line: show "Leader" first, then when follower appears show " — Follower".
     // If withoutPair is enabled, show only the single name.
+    // If follower is set but leader is empty, show follower as a single name (no dash).
     if (leaderChanged || followerChanged || withoutPairChanged) {
-      if (elPairLeader) elPairLeader.textContent = leader;
+      const leaderHas = Boolean(leader && leader.trim().length > 0);
+      const followerHas = Boolean(follower && follower.trim().length > 0);
 
-      const showTail = Boolean(!withoutPair && follower && follower.trim().length > 0);
+      // Prevent the preview from showing " — Name" when leader is not set.
+      // In that case we render the follower as the single visible name.
+      const effectiveLeader = leaderHas ? leader : (followerHas && !withoutPair ? follower : '');
+      const effectiveFollower = leaderHas && followerHas && !withoutPair ? follower : '';
+
+      if (elPairLeader) elPairLeader.textContent = effectiveLeader;
+
+      const showTail = Boolean(effectiveFollower && effectiveFollower.trim().length > 0);
       if (elPairTail) {
         elPairTail.classList.toggle('hidden', !showTail);
       }
-      if (elPairFollower) elPairFollower.textContent = showTail ? follower : '';
+      if (elPairFollower) elPairFollower.textContent = showTail ? effectiveFollower : '';
 
       // Animate only the changed part.
-      if (leaderChanged && leader && settings && settings.leaderAnimType && settings.leaderAnimType !== 'none') {
+      if (leaderChanged && effectiveLeader && settings && settings.leaderAnimType && settings.leaderAnimType !== 'none') {
         applyAnim(elPairLeader, settings.leaderAnimType, settings.leaderAnimMs);
       }
       if (followerChanged && showTail && settings && settings.followerAnimType && settings.followerAnimType !== 'none') {

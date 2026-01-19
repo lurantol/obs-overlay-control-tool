@@ -780,7 +780,10 @@ app.post("/api/operator/set", (req, res) => {
   const contest = contestById(divisionId);
   const title = contest ? contest.name : (overlayState.title || "");
 
-  if (action === "setLeader") {
+  if (action === "clearPair") {
+    // Keep title (division) but clear only the pair. Apply immediately.
+    setOverlayStateAndApply({ divisionId, title, leader: "", follower: "", withoutPair: false });
+  } else if (action === "setLeader") {
     setOverlayStateAndApply({ divisionId, title, leader, withoutPair });
   } else if (action === "setFollower") {
     setOverlayStateAndApply({ divisionId, title, follower, withoutPair });
