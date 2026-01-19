@@ -1,8 +1,22 @@
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:16px;}
-h1{margin-top:0}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:10px;}
 
-.header-row{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start}
+h2{margin:8px 0 10px 0}
+h3{margin:6px 0 10px 0}
+h4{margin:6px 0 8px 0}
+
+/* Compact top bar: tabs + service links on a single row (wraps on small screens) */
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.topbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:16px;line-height:1}
+
 .service-links{border:1px solid #ddd;border-radius:10px;padding:10px;min-width:320px;max-width:520px}
+.service-links-compact{padding:8px;min-width:280px}
+.service-links-compact .service-title{display:none}
+.service-links-compact .service-item{margin-bottom:6px}
+.service-links-compact .service-item:last-child{margin-bottom:0}
+.service-links-compact .service-item label{font-size:12px;margin-bottom:2px}
+.service-links-compact .service-input-row{gap:6px}
+.service-links-compact .small-btn{padding:6px 8px}
 .service-title{font-weight:700;margin-bottom:8px}
 .service-item{margin-bottom:10px}
 .service-item label{display:block;font-size:13px;color:#333;margin-bottom:4px}
@@ -14,7 +28,7 @@ h1{margin-top:0}
 select{width:100%}
 .status{margin-top:8px;font-size:14px}
 .preview{font-weight:600;margin-top:8px;white-space:pre-line}
-.tabs{margin-bottom:12px}
+.tabs{margin:0}
 .tab-btn,.live-subtab-btn,.admin-subtab-btn{padding:8px 12px;margin-right:4px;font-size:14px}
 .tab-btn.active,.live-subtab-btn.active,.admin-subtab-btn.active{font-weight:700}
 .tab-content{display:none}
@@ -57,11 +71,11 @@ code{background:#f5f5f5;padding:2px 4px;border-radius:4px}
 /* -------------------------------------------------------------------------- */
 
 .operator-shell {
-  margin-top: 10px;
+  margin-top: 6px;
   background: #0b0f14;
   color: #e6eaf0;
   border-radius: 16px;
-  padding: 16px;
+  padding: 12px;
   border: 1px solid rgba(255,255,255,0.08);
 }
 
@@ -156,7 +170,7 @@ code{background:#f5f5f5;padding:2px 4px;border-radius:4px}
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 
@@ -174,7 +188,7 @@ code{background:#f5f5f5;padding:2px 4px;border-radius:4px}
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-top: 1px solid rgba(255,255,255,0.07);
   color: rgba(230,234,240,0.75);
   font-size: 12px;
@@ -183,7 +197,14 @@ code{background:#f5f5f5;padding:2px 4px;border-radius:4px}
 .operator-kv { white-space: nowrap; }
 
 .operator-preview {
-  padding: 12px;
+  padding: 10px;
+  /* Keep Program/Preview boxes compact and одинакового размера.
+     Otherwise <img> will expand the card height and create extra scrolling. */
+  height: 170px;
+}
+
+@media (max-width: 680px) {
+  .operator-preview { height: 140px; }
 }
 
 .operator-scene-hotkeys {
@@ -345,7 +366,7 @@ code{background:#f5f5f5;padding:2px 4px;border-radius:4px}
 }
 
 .operator-preview-placeholder {
-  height: 240px;
+  height: 170px;
   border-radius: 12px;
   background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
   border: 1px dashed rgba(255,255,255,0.15);
@@ -357,7 +378,7 @@ code{background:#f5f5f5;padding:2px 4px;border-radius:4px}
 }
 
 @media (max-width: 680px) {
-  .operator-preview-placeholder { height: 200px; }
+  .operator-preview-placeholder { height: 140px; }
 }
 
 .operator-actions-panel {
