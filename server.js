@@ -1013,10 +1013,23 @@ app.post('/api/onair/finals', (req, res) => {
   if (!contest) return res.status(400).json({ error: 'invalid contestId' });
   if (contest.type !== 'finals') return res.status(400).json({ error: 'contest is not finals type' });
 
-  writeFile(currentTitleFile, buildTitle(contest.name, null, false));
+  // IMPORTANT:
+  // The Browser Overlay reads /api/overlay-state (not the legacy text files).
+  // Operator mode already updates overlayState via setOverlayStateAndApply().
+  // The main UI must do the same to keep behavior consistent.
+  const title = buildTitle(contest.name, null, false);
 
   if (Boolean(noPair)) {
-    writeFile(currentPairFile, '');
+    // Finals with no pair means: show title, hide pair line.
+    setOverlayStateAndApply({
+      mode: 'current',
+      divisionId: contestId,
+      title,
+      leader: '',
+      follower: '',
+      withoutPair: false,
+      hidden: false
+    });
     return res.json({ ok: true });
   }
 
@@ -1024,7 +1037,15 @@ app.post('/api/onair/finals', (req, res) => {
   const b = findParticipant(Number(secondNumber));
   if (!a || !b) return res.status(400).json({ error: 'invalid participant numbers' });
 
-  writeFile(currentPairFile, `${a.fullName} — ${b.fullName}`);
+  setOverlayStateAndApply({
+    mode: 'current',
+    divisionId: contestId,
+    title,
+    leader: a.fullName,
+    follower: b.fullName,
+    withoutPair: false,
+    hidden: false
+  });
   res.json({ ok: true });
 });
 
@@ -1038,9 +1059,17 @@ app.post('/api/onair/rounds', (req, res) => {
   if (contest.type !== 'rounds') return res.status(400).json({ error: 'contest is not rounds type' });
 
   const heat = heatLabel ? String(heatLabel) : null;
-  writeFile(currentTitleFile, buildTitle(contest.name, heat, false));
-  writeFile(currentPairFile, ''); // requirement: clear pair in rounds mode
-
+  const title = buildTitle(contest.name, heat, false);
+  // Rounds: always clear pair in on-air mode.
+  setOverlayStateAndApply({
+    mode: 'current',
+    divisionId: contestId,
+    title,
+    leader: '',
+    follower: '',
+    withoutPair: false,
+    hidden: false
+  });
   res.json({ ok: true });
 });
 
@@ -1051,10 +1080,18 @@ app.post('/api/onair/special', (req, res) => {
   const s = specialById(specialId);
   if (!s) return res.status(400).json({ error: 'invalid specialId' });
 
-  writeFile(currentTitleFile, buildSpecialTitle(s.name));
+  const title = buildSpecialTitle(s.name);
 
   if (Boolean(noPair)) {
-    writeFile(currentPairFile, '');
+    setOverlayStateAndApply({
+      mode: 'current',
+      divisionId: String(specialId),
+      title,
+      leader: '',
+      follower: '',
+      withoutPair: false,
+      hidden: false
+    });
     return res.json({ ok: true });
   }
 
@@ -1065,7 +1102,16 @@ app.post('/api/onair/special', (req, res) => {
     return res.status(400).json({ error: 'itemText must be one of the Special items' });
   }
 
-  writeFile(currentPairFile, chosen);
+  // Special item is a single line, so we render it as a "single name" (no dash).
+  setOverlayStateAndApply({
+    mode: 'current',
+    divisionId: String(specialId),
+    title,
+    leader: chosen,
+    follower: '',
+    withoutPair: true,
+    hidden: false
+  });
   res.json({ ok: true });
 });
 
@@ -1085,8 +1131,16 @@ app.post('/api/next', (req, res) => {
 
 // Resets
 app.post('/api/reset/onair', (req, res) => {
-  writeFile(currentTitleFile, '');
-  writeFile(currentPairFile, '');
+  // Keep reset consistent for both legacy Text Sources and Browser Overlay.
+  setOverlayStateAndApply({
+    mode: 'current',
+    divisionId: '',
+    title: '',
+    leader: '',
+    follower: '',
+    withoutPair: false,
+    hidden: false
+  });
   res.json({ ok: true });
 });
 app.post('/api/reset/next', (req, res) => {

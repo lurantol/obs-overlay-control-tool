@@ -8,14 +8,28 @@
     <link rel="stylesheet" href="/fonts/fonts.css" />
   </head>
   <body>
-    <div id="root" class="root">
-      <div id="title" class="title"></div>
-      <div id="pair" class="line">
-        <span id="pair-leader"></span>
-        <span id="pair-tail" class="pair-tail hidden">
-          <span id="pair-sep"> — </span>
-          <span id="pair-follower"></span>
-        </span>
+    <div id="layout" class="layout">
+      <div class="stage">
+        <div id="root" class="root">
+          <div id="title" class="title"></div>
+          <div id="pair" class="line">
+            <span id="pair-leader"></span>
+            <span id="pair-tail" class="pair-tail hidden">
+              <span id="pair-sep"> — </span>
+              <span id="pair-follower"></span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!--
+        Optional control panel.
+        Enabled only when URL contains: ?controls=1
+        This is useful when you open overlay.html in a browser (or as an OBS Dock)
+        and want the same controls as /operator.
+      -->
+      <div id="controls" class="controls hidden" aria-label="Operator controls">
+        <iframe id="controls-frame" title="Operator" src="/operator" loading="lazy"></iframe>
       </div>
     </div>
 

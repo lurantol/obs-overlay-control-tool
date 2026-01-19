@@ -21,8 +21,19 @@
   const interval = Number(qs.get('interval') || 250);
   const hideEmpty = (qs.get('hideEmpty') ?? '1') !== '0';
   const preview = (qs.get('preview') ?? '0') === '1';
+  const controls = (qs.get('controls') ?? '0') === '1';
 
   if (preview) document.body.classList.add('preview');
+  if (controls) {
+    document.body.classList.add('controls-on');
+    const controlsEl = document.getElementById('controls');
+    if (controlsEl) controlsEl.classList.remove('hidden');
+
+    // Allow overriding operator URL (useful if you proxy /operator somewhere else)
+    const operatorUrl = qs.get('operator') || '/operator';
+    const frame = document.getElementById('controls-frame');
+    if (frame && operatorUrl) frame.setAttribute('src', operatorUrl);
+  }
 
   const elTitle = document.getElementById('title');
   const elPair = document.getElementById('pair');
