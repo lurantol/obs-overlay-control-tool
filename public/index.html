@@ -345,7 +345,7 @@
 
       <div class="columns">
         <div class="col">
-          <h4>Шрифты</h4>
+          <h4>Шрифты + тексты</h4>
           <div class="row">
             <label>Title шрифт:</label>
             <select id="overlay-title-font"></select>
@@ -355,8 +355,91 @@
             <select id="overlay-pair-font"></select>
           </div>
 
+          <div class="columns" style="margin-top: 10px;">
+            <div class="col">
+              <h4>Title</h4>
+              <div class="row">
+                <label>Размер (px):</label>
+                <input type="number" id="overlay-title-size" min="10" max="200" step="1" />
+              </div>
+              <div class="row">
+                <label>Цвет:</label>
+                <input type="color" id="overlay-title-color" />
+              </div>
+
+              <div class="row">
+                <label>Анимация:</label>
+                <select id="overlay-title-anim">
+                  <option value="none">Нет</option>
+                  <option value="fade">Fade</option>
+                  <option value="fade-slide-up">Fade + Slide Up</option>
+                  <option value="slide-left">Slide Left</option>
+                  <option value="scale-in">Scale In</option>
+                </select>
+              </div>
+              <div class="row">
+                <label>Скорость (ms):</label>
+                <input type="number" id="overlay-title-anim-ms" min="0" max="5000" step="50" />
+              </div>
+            </div>
+            <div class="col">
+              <h4>Pair</h4>
+              <div class="row">
+                <label>Размер (px):</label>
+                <input type="number" id="overlay-pair-size" min="10" max="200" step="1" />
+              </div>
+              <div class="row">
+                <label>Цвет:</label>
+                <input type="color" id="overlay-pair-color" />
+              </div>
+
+              <div class="row">
+                <label>Leader анимация:</label>
+                <select id="overlay-leader-anim">
+                  <option value="none">Нет</option>
+                  <option value="fade">Fade</option>
+                  <option value="fade-slide-up">Fade + Slide Up</option>
+                  <option value="slide-left">Slide Left</option>
+                  <option value="scale-in">Scale In</option>
+                </select>
+              </div>
+              <div class="row">
+                <label>Скорость (ms):</label>
+                <input type="number" id="overlay-leader-anim-ms" min="0" max="5000" step="50" />
+              </div>
+
+              <div class="row">
+                <label>Follower анимация:</label>
+                <select id="overlay-follower-anim">
+                  <option value="none">Нет</option>
+                  <option value="fade">Fade</option>
+                  <option value="fade-slide-up">Fade + Slide Up</option>
+                  <option value="slide-left">Slide Left</option>
+                  <option value="scale-in">Scale In</option>
+                </select>
+              </div>
+              <div class="row">
+                <label>Скорость (ms):</label>
+                <input type="number" id="overlay-follower-anim-ms" min="0" max="5000" step="50" />
+              </div>
+            </div>
+          </div>
+
+          <h4 style="margin-top: 16px;">Пресеты оформления</h4>
           <div class="row">
-            <label>Добавить шрифт (ttf/otf/woff/woff2):</label>
+            <label>Пресет:</label>
+            <select id="overlay-preset-select"></select>
+          </div>
+          <div class="row">
+            <input id="overlay-preset-name" type="text" placeholder="Название пресета" style="flex: 1;" />
+            <button class="small-btn" id="overlay-preset-save">Сохранить как пресет</button>
+            <button class="small-btn" id="overlay-preset-apply">Применить</button>
+            <button class="small-btn" id="overlay-preset-delete">Удалить</button>
+          </div>
+
+          <h4 style="margin-top: 16px;">Добавить шрифт</h4>
+          <div class="row">
+            <label>ttf/otf/woff/woff2:</label>
             <input type="file" id="overlay-font-upload" accept=".ttf,.otf,.woff,.woff2" />
             <button id="overlay-font-upload-btn">Загрузить</button>
           </div>
@@ -366,34 +449,8 @@
         <div class="col">
           <h4>Предпросмотр</h4>
           <p class="hint">Мини-превью реального оверлея (как в OBS Browser Source). Показывает сохранённые настройки.</p>
-          <div style="width: 100%; aspect-ratio: 16 / 9; background: rgba(0,0,0,0.15); border-radius: 10px; overflow: hidden;">
+          <div style="width: 100%; height: 140px; background: rgba(0,0,0,0.15); border-radius: 10px; overflow: hidden;">
             <iframe id="overlay-preview" src="/overlay.html?mode=current&preview=1&hideEmpty=0" style="width:100%;height:100%;border:0;"></iframe>
-          </div>
-        </div>
-      </div>
-
-      <div class="columns">
-        <div class="col">
-          <h4>Title</h4>
-          <div class="row">
-            <label>Размер (px):</label>
-            <input type="number" id="overlay-title-size" min="10" max="200" step="1" />
-          </div>
-          <div class="row">
-            <label>Цвет:</label>
-            <input type="color" id="overlay-title-color" />
-          </div>
-        </div>
-
-        <div class="col">
-          <h4>Pair</h4>
-          <div class="row">
-            <label>Размер (px):</label>
-            <input type="number" id="overlay-pair-size" min="10" max="200" step="1" />
-          </div>
-          <div class="row">
-            <label>Цвет:</label>
-            <input type="color" id="overlay-pair-color" />
           </div>
         </div>
       </div>

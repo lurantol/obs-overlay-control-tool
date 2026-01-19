@@ -1,14 +1,10 @@
 :root {
-  --title-font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  --pair-font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --title-font-family: system-ui;
+  --pair-font-family: system-ui;
   --title-size: 48px;
   --pair-size: 40px;
   --title-color: #ffffff;
   --pair-color: #ffffff;
-  --line-height: 1.1;
-  --shadow: 0 2px 8px rgba(0,0,0,0.55);
-  --pad-x: 24px;
-  --pad-y: 16px;
 }
 
 html, body {
@@ -18,39 +14,85 @@ html, body {
   height: 100%;
   background: transparent;
   overflow: hidden;
-  font-family: var(--title-font-family);
 }
 
 .root {
-  box-sizing: border-box;
-  padding: var(--pad-y) var(--pad-x);
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  left: 40px;
+  bottom: 40px;
+  right: 40px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
+  gap: 8px;
+}
+
+/* In small preview iframe we want the title+pair to fit (2 lines) */
+body.preview .root {
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
 }
 
 .title {
   font-family: var(--title-font-family);
   font-size: var(--title-size);
-  line-height: var(--line-height);
+  font-weight: 700;
   color: var(--title-color);
-  text-shadow: var(--shadow);
-  white-space: pre-wrap;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.45);
+  line-height: 1.05;
 }
 
-.pair {
+.line {
   font-family: var(--pair-font-family);
-  margin-top: 8px;
   font-size: var(--pair-size);
-  line-height: var(--line-height);
+  font-weight: 600;
   color: var(--pair-color);
-  text-shadow: var(--shadow);
-  white-space: pre-wrap;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.45);
+  line-height: 1.05;
 }
 
-.hidden {
-  display: none;
+.pair-tail {
+  white-space: pre;
+}
+
+.hidden { display: none !important; }
+
+/* Animations (type is set as a class on the element) */
+
+.anim-none { }
+
+.anim-fade.play {
+  animation: fadeIn var(--anim-ms, 500ms) ease-out both;
+}
+
+.anim-fade-slide-up.play {
+  animation: fadeSlideUp var(--anim-ms, 500ms) ease-out both;
+}
+
+.anim-slide-left.play {
+  animation: slideLeft var(--anim-ms, 500ms) ease-out both;
+}
+
+.anim-scale-in.play {
+  animation: scaleIn var(--anim-ms, 500ms) cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideLeft {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }

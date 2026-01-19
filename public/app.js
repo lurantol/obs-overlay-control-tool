@@ -105,6 +105,19 @@ const overlayTitleSizeInput = document.getElementById('overlay-title-size');
 const overlayPairSizeInput = document.getElementById('overlay-pair-size');
 const overlayTitleColorInput = document.getElementById('overlay-title-color');
 const overlayPairColorInput = document.getElementById('overlay-pair-color');
+const overlayTitleAnimSelect = document.getElementById("overlay-title-anim");
+const overlayTitleAnimMsInput = document.getElementById("overlay-title-anim-ms");
+const overlayLeaderAnimSelect = document.getElementById("overlay-leader-anim");
+const overlayLeaderAnimMsInput = document.getElementById("overlay-leader-anim-ms");
+const overlayFollowerAnimSelect = document.getElementById("overlay-follower-anim");
+const overlayFollowerAnimMsInput = document.getElementById("overlay-follower-anim-ms");
+
+const presetSelect = document.getElementById("preset-select");
+const presetNameInput = document.getElementById("preset-name");
+const presetSaveBtn = document.getElementById("preset-save");
+const presetApplyBtn = document.getElementById("preset-apply");
+const presetDeleteBtn = document.getElementById("preset-delete");
+
 const overlaySaveBtn = document.getElementById('overlay-save');
 const overlayStatusEl = document.getElementById('overlay-status');
 
@@ -939,6 +952,13 @@ async function loadOverlaySettingsUI() {
     overlayPairSizeInput.value = Number(s.pairSizePx || 40);
     overlayTitleColorInput.value = String(s.titleColor || '#ffffff');
     overlayPairColorInput.value = String(s.pairColor || '#ffffff');
+    if (overlayTitleAnimSelect) overlayTitleAnimSelect.value = String(s.titleAnimType || "none");
+    if (overlayTitleAnimMsInput) overlayTitleAnimMsInput.value = Number(s.titleAnimMs ?? 500);
+    if (overlayLeaderAnimSelect) overlayLeaderAnimSelect.value = String(s.leaderAnimType || "none");
+    if (overlayLeaderAnimMsInput) overlayLeaderAnimMsInput.value = Number(s.leaderAnimMs ?? 500);
+    if (overlayFollowerAnimSelect) overlayFollowerAnimSelect.value = String(s.followerAnimType || "none");
+    if (overlayFollowerAnimMsInput) overlayFollowerAnimMsInput.value = Number(s.followerAnimMs ?? 500);
+
     setText('overlay-status', '');
   } catch {
     setText('overlay-status', 'Ошибка связи с сервером');
@@ -956,6 +976,13 @@ if (overlaySaveBtn) {
         pairSizePx: Number(overlayPairSizeInput.value),
         titleColor: overlayTitleColorInput.value,
         pairColor: overlayPairColorInput.value,
+        titleAnimType: overlayTitleAnimSelect ? overlayTitleAnimSelect.value : "none",
+        titleAnimMs: overlayTitleAnimMsInput ? Number(overlayTitleAnimMsInput.value) : 500,
+        leaderAnimType: overlayLeaderAnimSelect ? overlayLeaderAnimSelect.value : "none",
+        leaderAnimMs: overlayLeaderAnimMsInput ? Number(overlayLeaderAnimMsInput.value) : 500,
+        followerAnimType: overlayFollowerAnimSelect ? overlayFollowerAnimSelect.value : "none",
+        followerAnimMs: overlayFollowerAnimMsInput ? Number(overlayFollowerAnimMsInput.value) : 500,
+
       };
 
       const res = await fetch(apiBase + '/api/overlay-settings', {
@@ -1009,6 +1036,104 @@ if (overlayFontUploadBtn) {
   });
 }
 
+// Presets UI (Stage 5)
+async function loadPresetsUI() {
+  if (!presetSelect) return;
+  try {
+    const res = await fetch(apiBase + "/api/presets", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    const list = Array.isArray(data.presets) ? data.presets : [];
+    const current = presetSelect.value;
+    presetSelect.innerHTML = "";
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "—";
+    presetSelect.appendChild(empty);
+    for (const p of list) {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      presetSelect.appendChild(opt);
+    }
+    if (current) presetSelect.value = current;
+  } catch { /* ignore */ }
+}
+
+async function createPresetFromCurrent() {
+  const name = String(presetNameInput?.value || "").trim();
+  if (!name) { setText("overlay-status", "Введите имя пресета"); return; }
+  const settings = {
+    titleFontFamily: overlayTitleFontSelect?.value || "system-ui",
+    pairFontFamily: overlayPairFontSelect?.value || "system-ui",
+    titleSizePx: Number(overlayTitleSizeInput?.value || 48),
+    pairSizePx: Number(overlayPairSizeInput?.value || 40),
+    titleColor: overlayTitleColorInput?.value || "#ffffff",
+    pairColor: overlayPairColorInput?.value || "#ffffff",
+    titleAnimType: overlayTitleAnimSelect ? overlayTitleAnimSelect.value : "none",
+    titleAnimMs: overlayTitleAnimMsInput ? Number(overlayTitleAnimMsInput.value) : 500,
+    leaderAnimType: overlayLeaderAnimSelect ? overlayLeaderAnimSelect.value : "none",
+    leaderAnimMs: overlayLeaderAnimMsInput ? Number(overlayLeaderAnimMsInput.value) : 500,
+    followerAnimType: overlayFollowerAnimSelect ? overlayFollowerAnimSelect.value : "none",
+    followerAnimMs: overlayFollowerAnimMsInput ? Number(overlayFollowerAnimMsInput.value) : 500
+  };
+
+  setText("overlay-status", "Сохранение пресета...");
+  try {
+    const res = await fetch(apiBase + "/api/presets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, settings })
+    });
+    const data = await res.json();
+    if (!res.ok) { setText("overlay-status", "Ошибка: " + (data.error || "unknown")); return; }
+    setText("overlay-status", "Пресет сохранён");
+    if (presetNameInput) presetNameInput.value = "";
+    await loadPresetsUI();
+  } catch {
+    setText("overlay-status", "Ошибка связи с сервером");
+  }
+}
+
+async function applyPreset() {
+  const id = String(presetSelect?.value || "");
+  if (!id) { setText("overlay-status", "Выберите пресет"); return; }
+  setText("overlay-status", "Применение пресета...");
+  try {
+    const res = await fetch(apiBase + "/api/presets/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id })
+    });
+    const data = await res.json();
+    if (!res.ok) { setText("overlay-status", "Ошибка: " + (data.error || "unknown")); return; }
+    setText("overlay-status", "Пресет применён. Нажмите «Сохранить настройки», чтобы закрепить (или продолжайте работать)." );
+    await loadOverlaySettingsUI();
+    if (overlayPreviewFrame) overlayPreviewFrame.src = "/overlay.html?mode=current&preview=1&hideEmpty=0&t=" + Date.now();
+  } catch {
+    setText("overlay-status", "Ошибка связи с сервером");
+  }
+}
+
+async function deletePreset() {
+  const id = String(presetSelect?.value || "");
+  if (!id) { setText("overlay-status", "Выберите пресет"); return; }
+  if (!confirm("Удалить пресет?")) return;
+  try {
+    const res = await fetch(apiBase + "/api/presets/" + encodeURIComponent(id), { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) { setText("overlay-status", "Ошибка: " + (data.error || "unknown")); return; }
+    setText("overlay-status", "Пресет удалён");
+    await loadPresetsUI();
+  } catch {
+    setText("overlay-status", "Ошибка связи с сервером");
+  }
+}
+
+if (presetSaveBtn) presetSaveBtn.addEventListener("click", createPresetFromCurrent);
+if (presetApplyBtn) presetApplyBtn.addEventListener("click", applyPreset);
+if (presetDeleteBtn) presetDeleteBtn.addEventListener("click", deletePreset);
+
 async function fullRefresh() {
   await loadContests();
   await loadRoundButtons();
@@ -1024,6 +1149,7 @@ async function fullRefresh() {
   await refreshSetup();
   await loadOverlayFontsUI();
   await loadOverlaySettingsUI();
+  await loadPresetsUI();
 }
 
 // Init

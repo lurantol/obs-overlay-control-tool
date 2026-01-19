@@ -29,6 +29,10 @@ const contestParticipantsPath = path.join(dataDir, 'contest-participants.json');
 const roundsButtonsPath = path.join(dataDir, 'round-buttons.json');
 const specialsPath = path.join(dataDir, 'specials.json');
 const overlaySettingsPath = path.join(dataDir, 'overlay-settings.json');
+const presetsPath = path.join(dataDir, "presets.json");
+const overlayStatePath = path.join(dataDir, "overlay-state.json");
+const historyPath = path.join(dataDir, "history.json");
+
 
 const operatorSettingsPath = path.join(dataDir, 'operator-settings.json');
 
@@ -55,12 +59,18 @@ let specials = []; // [{id, name, items:[...] }]
 
 // Browser Overlay appearance (font/size/color)
 let overlaySettings = {
-  titleFontFamily: 'system-ui',
-  pairFontFamily: 'system-ui',
+  titleFontFamily: "system-ui",
+  pairFontFamily: "system-ui",
   titleSizePx: 48,
   pairSizePx: 40,
-  titleColor: '#ffffff',
-  pairColor: '#ffffff'
+  titleColor: "#ffffff",
+  pairColor: "#ffffff",
+  titleAnimType: "none",
+  titleAnimMs: 500,
+  leaderAnimType: "none",
+  leaderAnimMs: 500,
+  followerAnimType: "none",
+  followerAnimMs: 500
 };
 
 // Operator Mode settings (Stage 2)
@@ -75,6 +85,25 @@ let operatorSettings = {
   previewOnlyIfStudioMode: true,
   autoRefreshScreenshots: true
 };
+// Overlay state (drives Browser Overlay rendering + animations)
+let overlayState = {
+  applyId: 0,
+  mode: "current",
+  divisionId: "",
+  title: "",
+  leader: "",
+  follower: "",
+  withoutPair: false,
+  hidden: false
+};
+
+// Operator history (Undo/Redo)
+let history = [];
+let historyIndex = -1;
+
+// Presets for overlay appearance
+let presets = [];
+
 
 // OBS connection state
 const obs = (OBSWebSocket ? new OBSWebSocket() : null);
@@ -259,8 +288,26 @@ async function disconnectObs() {
 
 function initData() {
   participants = loadJson(participantsPath, []);
+  if (!Array.isArray(participants)) participants = [];
+  participants = participants
+    .filter(p => p && typeof p === 'object')
+    .map(p => ({
+      number: Number(p.number),
+      fullName: String(p.fullName || '').trim(),
+      role: normalizeRole(p.role, p.number)
+    }))
+    .filter(p => Number.isFinite(p.number) && p.fullName.length > 0);
   contests = loadJson(contestsPath, []);
   contestParticipants = loadJson(contestParticipantsPath, {});
+  if (!contestParticipants || typeof contestParticipants !== 'object') contestParticipants = {};
+  // Normalize contest participant lists to numbers to avoid string/number mismatches.
+  for (const [cid, arr] of Object.entries(contestParticipants)) {
+    if (!Array.isArray(arr)) {
+      contestParticipants[cid] = [];
+      continue;
+    }
+    contestParticipants[cid] = arr.map(Number).filter(n => Number.isFinite(n));
+  }
   roundButtons = loadJson(roundsButtonsPath, ['Heat 1', 'Heat 2', 'Heat 3', 'Heat 4']);
   const rawSpecials = loadJson(specialsPath, []);
   specials = Array.isArray(rawSpecials)
@@ -278,6 +325,29 @@ function initData() {
   const loadedOperatorSettings = loadJson(operatorSettingsPath, operatorSettings);
   operatorSettings = normalizeOperatorSettings(loadedOperatorSettings);
   saveJson(operatorSettingsPath, operatorSettings);
+
+  // Overlay state + history + presets
+  const loadedState = loadJson(overlayStatePath, overlayState);
+  overlayState = normalizeOverlayState(loadedState);
+  saveJson(overlayStatePath, overlayState);
+
+  const loadedHistory = loadJson(historyPath, { items: [], index: -1 });
+  history = Array.isArray(loadedHistory.items) ? loadedHistory.items : [];
+  historyIndex = Number.isFinite(loadedHistory.index) ? loadedHistory.index : -1;
+  if (historyIndex < -1) historyIndex = -1;
+  if (historyIndex >= history.length) historyIndex = history.length - 1;
+  saveJson(historyPath, { items: history, index: historyIndex });
+  if (!history.length) {
+    history = [overlayState];
+    historyIndex = 0;
+    saveJson(historyPath, { items: history, index: historyIndex });
+  }
+
+
+  presets = loadJson(presetsPath, []);
+  if (!Array.isArray(presets)) presets = [];
+  saveJson(presetsPath, presets);
+
 
   // Custom fonts
   if (!fs.existsSync(fontsDir)) fs.mkdirSync(fontsDir, { recursive: true });
@@ -308,15 +378,78 @@ function normalizeOperatorSettings(input) {
 }
 
 function normalizeOverlaySettings(input) {
-  const s = (input && typeof input === 'object') ? input : {};
+  const s = (input && typeof input === "object") ? input : {};
   const titleFontFamily = String(s.titleFontFamily ?? overlaySettings.titleFontFamily).trim() || overlaySettings.titleFontFamily;
   const pairFontFamily = String(s.pairFontFamily ?? overlaySettings.pairFontFamily).trim() || overlaySettings.pairFontFamily;
   const titleSizePx = clampInt(s.titleSizePx ?? overlaySettings.titleSizePx, 10, 200, overlaySettings.titleSizePx);
   const pairSizePx = clampInt(s.pairSizePx ?? overlaySettings.pairSizePx, 10, 200, overlaySettings.pairSizePx);
   const titleColor = normalizeHexColor(s.titleColor ?? overlaySettings.titleColor) || overlaySettings.titleColor;
   const pairColor = normalizeHexColor(s.pairColor ?? overlaySettings.pairColor) || overlaySettings.pairColor;
-  return { titleFontFamily, pairFontFamily, titleSizePx, pairSizePx, titleColor, pairColor };
+
+  const allowed = new Set(["none","fade","fade-slide-up","slide-left","scale-in"]);
+  const titleAnimType = allowed.has(String(s.titleAnimType ?? overlaySettings.titleAnimType).trim()) ? String(s.titleAnimType ?? overlaySettings.titleAnimType).trim() : overlaySettings.titleAnimType;
+  const leaderAnimType = allowed.has(String(s.leaderAnimType ?? overlaySettings.leaderAnimType).trim()) ? String(s.leaderAnimType ?? overlaySettings.leaderAnimType).trim() : overlaySettings.leaderAnimType;
+  const followerAnimType = allowed.has(String(s.followerAnimType ?? overlaySettings.followerAnimType).trim()) ? String(s.followerAnimType ?? overlaySettings.followerAnimType).trim() : overlaySettings.followerAnimType;
+
+  const titleAnimMs = clampInt(s.titleAnimMs ?? overlaySettings.titleAnimMs, 0, 5000, overlaySettings.titleAnimMs);
+  const leaderAnimMs = clampInt(s.leaderAnimMs ?? overlaySettings.leaderAnimMs, 0, 5000, overlaySettings.leaderAnimMs);
+  const followerAnimMs = clampInt(s.followerAnimMs ?? overlaySettings.followerAnimMs, 0, 5000, overlaySettings.followerAnimMs);
+
+  return {
+    titleFontFamily, pairFontFamily, titleSizePx, pairSizePx, titleColor, pairColor,
+    titleAnimType, titleAnimMs, leaderAnimType, leaderAnimMs, followerAnimType, followerAnimMs
+  };
 }
+
+function normalizeOverlayState(input) {
+  const s = (input && typeof input === "object") ? input : {};
+  const applyId = clampInt(s.applyId ?? overlayState.applyId ?? 0, 0, 1000000000, 0);
+  const mode = (s.mode === "next") ? "next" : "current";
+  const divisionId = String(s.divisionId ?? "").trim();
+  const title = String(s.title ?? "").trim();
+  const leader = String(s.leader ?? "").trim();
+  const follower = String(s.follower ?? "").trim();
+  const withoutPair = Boolean(s.withoutPair);
+  const hidden = Boolean(s.hidden);
+  return { applyId, mode, divisionId, title, leader, follower, withoutPair, hidden };
+}
+
+function pushHistorySnapshot(snapshot) {
+  const s = normalizeOverlayState(snapshot);
+  // Drop redo tail
+  if (historyIndex < history.length - 1) {
+    history = history.slice(0, historyIndex + 1);
+  }
+  history.push(s);
+  if (history.length > 200) {
+    history = history.slice(history.length - 200);
+  }
+  historyIndex = history.length - 1;
+  saveJson(historyPath, { items: history, index: historyIndex });
+}
+
+function setOverlayStateAndApply(nextState) {
+  const prev = overlayState;
+  const s = normalizeOverlayState({ ...prev, ...nextState });
+  s.applyId = (prev.applyId || 0) + 1;
+  overlayState = s;
+  saveJson(overlayStatePath, overlayState);
+  pushHistorySnapshot(overlayState);
+
+  // Keep legacy text files for compatibility
+  writeFile(currentTitleFile, overlayState.hidden ? "" : overlayState.title);
+  const pairText = overlayState.hidden ? "" : buildPairText(overlayState.leader, overlayState.follower, overlayState.withoutPair);
+  writeFile(currentPairFile, pairText);
+}
+
+function buildPairText(leader, follower, withoutPair) {
+  if (withoutPair) return String(leader || follower || "").trim();
+  const l = String(leader || "").trim();
+  const f = String(follower || "").trim();
+  if (l && f) return `${l} — ${f}`;
+  return l || f;
+}
+
 
 function sanitizeFontName(name) {
   return String(name || '')
@@ -395,6 +528,15 @@ function roleByNumber(number, leaderParity = 'odd') {
   const leaderIsOdd = (leaderParity !== 'even');
   const isLeader = leaderIsOdd ? isOdd : !isOdd;
   return isLeader ? 'lead' : 'follow';
+}
+
+function normalizeRole(role, number) {
+  const r = String(role || '').trim().toLowerCase();
+  if (r === 'lead' || r === 'leader' || r === 'l' || r === 'm') return 'lead';
+  if (r === 'follow' || r === 'follower' || r === 'followe' || r === 'f') return 'follow';
+  // If role missing/unknown, infer by number parity (odd=lead, even=follow)
+  if (Number.isFinite(Number(number))) return roleByNumber(Number(number), 'odd');
+  return 'unknown';
 }
 
 function findParticipant(number) {
@@ -531,6 +673,123 @@ app.post('/api/overlay-settings', (req, res) => {
   saveJson(overlaySettingsPath, overlaySettings);
   res.json({ ok: true, overlaySettings });
 });
+
+// API: overlay state for Browser Overlay (Stage 4: animations)
+app.get("/api/overlay-state", (req, res) => {
+  res.json(overlayState);
+});
+
+// API: presets (Stage 5)
+app.get("/api/presets", (req, res) => {
+  res.json({ presets });
+});
+
+app.post("/api/presets", (req, res) => {
+  const name = String(req.body?.name || "").trim();
+  if (!name) return res.status(400).json({ error: "Preset name is required" });
+  const id = crypto.randomBytes(6).toString("hex");
+  const settings = normalizeOverlaySettings(req.body?.settings || overlaySettings);
+  const preset = { id, name, settings, createdAt: Date.now() };
+  presets.push(preset);
+  saveJson(presetsPath, presets);
+  res.json({ ok: true, preset });
+});
+
+app.post("/api/presets/apply", (req, res) => {
+  const id = String(req.body?.id || "").trim();
+  const p = presets.find(x => x.id === id);
+  if (!p) return res.status(404).json({ error: "Preset not found" });
+  overlaySettings = normalizeOverlaySettings(p.settings);
+  saveJson(overlaySettingsPath, overlaySettings);
+  res.json({ ok: true, overlaySettings });
+});
+
+app.delete("/api/presets/:id", (req, res) => {
+  const id = String(req.params.id || "").trim();
+  const idx = presets.findIndex(x => x.id === id);
+  if (idx === -1) return res.status(404).json({ error: "Preset not found" });
+  const removed = presets.splice(idx, 1)[0];
+  saveJson(presetsPath, presets);
+  res.json({ ok: true, removed });
+});
+
+// API: operator state/history (Stage 3)
+app.get("/api/operator/history", (req, res) => {
+  res.json({ items: history, index: historyIndex });
+});
+
+app.post("/api/operator/undo", (req, res) => {
+  if (historyIndex <= 0) return res.json({ ok: true, state: overlayState, historyIndex });
+  historyIndex -= 1;
+  overlayState = normalizeOverlayState(history[historyIndex] || overlayState);
+  saveJson(overlayStatePath, overlayState);
+  saveJson(historyPath, { items: history, index: historyIndex });
+  writeFile(currentTitleFile, overlayState.hidden ? "" : overlayState.title);
+  writeFile(currentPairFile, overlayState.hidden ? "" : buildPairText(overlayState.leader, overlayState.follower, overlayState.withoutPair));
+  res.json({ ok: true, state: overlayState, historyIndex });
+});
+
+app.post("/api/operator/redo", (req, res) => {
+  if (historyIndex >= history.length - 1) return res.json({ ok: true, state: overlayState, historyIndex });
+  historyIndex += 1;
+  overlayState = normalizeOverlayState(history[historyIndex] || overlayState);
+  saveJson(overlayStatePath, overlayState);
+  saveJson(historyPath, { items: history, index: historyIndex });
+  writeFile(currentTitleFile, overlayState.hidden ? "" : overlayState.title);
+  writeFile(currentPairFile, overlayState.hidden ? "" : buildPairText(overlayState.leader, overlayState.follower, overlayState.withoutPair));
+  res.json({ ok: true, state: overlayState, historyIndex });
+});
+
+app.post("/api/operator/clear", (req, res) => {
+  setOverlayStateAndApply({ title: "", leader: "", follower: "", divisionId: "", withoutPair: false, hidden: false });
+  res.json({ ok: true, state: overlayState });
+});
+
+app.post("/api/operator/hide", (req, res) => {
+  setOverlayStateAndApply({ hidden: true });
+  res.json({ ok: true, state: overlayState });
+});
+
+app.post("/api/operator/show", (req, res) => {
+  setOverlayStateAndApply({ hidden: false });
+  res.json({ ok: true, state: overlayState });
+});
+
+app.get("/api/operator/finals", (req, res) => {
+  const finals = contests.filter(c => c && c.type === "finals");
+  const data = finals.map(c => {
+    const ps = getParticipantsForContest(c.id);
+    return {
+      id: c.id,
+      name: c.name,
+      leaders: ps.filter(p => p.role === "lead"),
+      followers: ps.filter(p => p.role === "follow")
+    };
+  });
+  res.json({ finals: data });
+});
+
+app.post("/api/operator/set", (req, res) => {
+  const action = String(req.body?.action || "setBoth");
+  const divisionId = String(req.body?.divisionId || "").trim();
+  const withoutPair = Boolean(req.body?.withoutPair);
+  const leaderNumber = req.body?.leaderNumber;
+  const followerNumber = req.body?.followerNumber;
+  const leader = Number.isFinite(Number(leaderNumber)) ? (findParticipant(Number(leaderNumber))?.fullName || "") : "";
+  const follower = Number.isFinite(Number(followerNumber)) ? (findParticipant(Number(followerNumber))?.fullName || "") : "";
+  const contest = contestById(divisionId);
+  const title = contest ? contest.name : (overlayState.title || "");
+
+  if (action === "setLeader") {
+    setOverlayStateAndApply({ divisionId, title, leader, withoutPair });
+  } else if (action === "setFollower") {
+    setOverlayStateAndApply({ divisionId, title, follower, withoutPair });
+  } else {
+    setOverlayStateAndApply({ divisionId, title, leader, follower, withoutPair });
+  }
+  res.json({ ok: true, state: overlayState });
+});
+
 
 // -------------------------
 // Operator Mode API (Stage 2)
