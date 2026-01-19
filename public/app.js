@@ -605,13 +605,14 @@ async function loadAllParticipantsForSetup() {
 }
 
 async function refreshSetup() {
-  fillSelect(setupContestSelect, contestsAll);
+  // Setup is only for Finals / Awards. Prelims/Semis (rounds) should not appear here.
+  fillSelect(setupContestSelect, finalsContests);
   const all = await loadAllParticipantsForSetup();
   setupLeadsDiv.innerHTML = '';
   setupFollowsDiv.innerHTML = '';
 
   // Load already saved subset for selected contest (if any)
-  const contestId = setupContestSelect.value || (contestsAll[0] && contestsAll[0].id);
+  const contestId = setupContestSelect.value || (finalsContests[0] && finalsContests[0].id);
   if (contestId) setupContestSelect.value = contestId;
   let savedSet = null; // null = not set yet
   try {

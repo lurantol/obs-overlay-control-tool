@@ -22,7 +22,9 @@
     });
   });
 
-  // Modal
+  // Choose Dancers panel
+  // Historically it was a modal. Now it's inline on the View tab.
+  // We keep ids for backward compatibility with existing JS.
   const openBtn = $('op-choose');
   const cancelBtn = $('op-modal-cancel');
   const modal = $('op-modal-backdrop');
@@ -42,7 +44,23 @@
     // lazy load data each time
     loadFinals();
   });
-  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+  function resetPick() {
+    selected.withoutPair = false;
+    selected.leaderNumber = null;
+    selected.followerNumber = null;
+    selected.leaderName = '';
+    selected.followerName = '';
+    if (withoutPairEl) withoutPairEl.checked = false;
+    renderLists();
+  }
+
+  if (cancelBtn) cancelBtn.addEventListener('click', () => {
+    // If modal exists - just close it.
+    // If it's inline - cancel = reset selection (does not apply to overlay).
+    if (modal) closeModal();
+    else resetPick();
+  });
   if (modal) {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) closeModal();
@@ -88,8 +106,6 @@
   // Modal elements
   const divisionSelect = $('op-division-select');
   const withoutPairEl = $('op-without-pair');
-  const leaderSearchEl = $('op-leader-search');
-  const followerSearchEl = $('op-follower-search');
   const leaderListEl = $('op-leader-list');
   const followerListEl = $('op-follower-list');
   const selectedPairEl = $('op-selected-pair');
@@ -490,21 +506,9 @@
     const leaders = (f?.leaders || []);
     const followers = (f?.followers || []);
 
-    const lq = String(leaderSearchEl?.value || '').toLowerCase();
-    const fq = String(followerSearchEl?.value || '').toLowerCase();
-
-    const leadersFiltered = leaders.filter(p => {
-      const t = `${p.number} ${p.fullName}`.toLowerCase();
-      return t.includes(lq);
-    });
-
-    const followersFiltered = followers.filter(p => {
-      const t = `${p.number} ${p.fullName}`.toLowerCase();
-      return t.includes(fq);
-    });
-
-    if (leaderListEl) leaderListEl.innerHTML = renderPickList(leadersFiltered, 'leader');
-    if (followerListEl) followerListEl.innerHTML = renderPickList(followersFiltered, 'follower');
+    // Two-column pick lists (no search). Operator should see full configured lists.
+    if (leaderListEl) leaderListEl.innerHTML = renderPickList(leaders, 'leader');
+    if (followerListEl) followerListEl.innerHTML = renderPickList(followers, 'follower');
 
     bindPickHandlers();
     updateSelectedText();
@@ -523,7 +527,8 @@
   }
 
   function bindPickHandlers() {
-    const btns = modal ? modal.querySelectorAll('.operator-list-item') : [];
+    const scope = modal || document;
+    const btns = scope.querySelectorAll('.operator-list-item');
     btns.forEach(b => {
       b.addEventListener('click', () => {
         const kind = b.dataset.kind;
@@ -589,8 +594,6 @@
       renderLists();
     });
   }
-  if (leaderSearchEl) leaderSearchEl.addEventListener('input', renderLists);
-  if (followerSearchEl) followerSearchEl.addEventListener('input', renderLists);
   if (withoutPairEl) withoutPairEl.addEventListener('change', updateSelectedText);
 
   if (btnSwap) btnSwap.addEventListener('click', swap);

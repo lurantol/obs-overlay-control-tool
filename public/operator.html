@@ -66,35 +66,33 @@
             <div class="operator-controls-current-value" id="op-current-title">—</div>
           </div>
 
-          <div class="operator-controls-grid">
+          <div class="operator-controls-actions" aria-label="Apply actions">
+            <button class="operator-btn" id="op-modal-cancel">Cancel</button>
+            <button class="operator-btn" id="op-swap">Swap</button>
+            <button class="operator-btn warn" id="op-clean-pair">Clean pair</button>
+            <button class="operator-btn" id="op-apply-leader">Apply leader</button>
+            <button class="operator-btn" id="op-apply-follower">Apply follower</button>
+            <button class="operator-btn primary" id="op-apply-both">Apply pair</button>
+          </div>
+
+          <div class="operator-controls-grid" aria-label="Overlay controls">
             <button class="operator-btn" id="op-prev">Prev</button>
             <button class="operator-btn" id="op-next">Next</button>
-            <button class="operator-btn primary" id="op-choose">Choose dancers</button>
             <button class="operator-btn" id="op-clear">Clear</button>
             <button class="operator-btn" id="op-hide">Hide</button>
             <button class="operator-btn" id="op-apply">Apply to OBS</button>
+            <button class="operator-btn secondary" id="op-choose" style="display:none">Choose dancers</button>
           </div>
 
-                  </div>
-
-        <div class="operator-card operator-history-card">
-          <div class="operator-card-header">
-            <div class="operator-card-title">History</div>
-            <div class="operator-card-meta">Undo / Redo</div>
-          </div>
-          <div class="operator-history" id="op-history">
-            <div class="operator-history-item">—</div>
-          </div>
         </div>
-      </div>
 
-      <div class="operator-modal-backdrop" id="op-modal-backdrop" aria-hidden="true">
-        <div class="operator-modal" role="dialog" aria-modal="true">
-          <div class="operator-modal-header">
-            <div class="operator-modal-title">Choose dancers</div>
+        <div class="operator-card operator-dancers-card">
+          <div class="operator-card-header">
+            <div class="operator-card-title">Choose dancers</div>
+            <div class="operator-card-meta">Finals only</div>
           </div>
 
-          <div class="operator-modal-body">
+          <div class="operator-dancers-body">
             <div class="operator-form-row">
               <label class="operator-label">Division (Finals only)</label>
               <select class="operator-select" id="op-division-select">
@@ -112,7 +110,6 @@
             <div class="operator-dual">
               <div class="operator-dual-col">
                 <div class="operator-dual-title">LEADER</div>
-                <input class="operator-input" id="op-leader-search" placeholder="Search leader" />
                 <div class="operator-list" id="op-leader-list">
                   <div class="operator-list-empty">Выберите номинацию</div>
                 </div>
@@ -120,7 +117,6 @@
 
               <div class="operator-dual-col">
                 <div class="operator-dual-title">FOLLOWER</div>
-                <input class="operator-input" id="op-follower-search" placeholder="Search follower" />
                 <div class="operator-list" id="op-follower-list">
                   <div class="operator-list-empty">Выберите номинацию</div>
                 </div>
@@ -131,15 +127,16 @@
               <div class="operator-selected">Selected: <span id="op-selected-pair">—</span></div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div class="operator-modal-footer">
-            <button class="operator-btn" id="op-modal-cancel">Cancel</button>
-            <button class="operator-btn" id="op-swap">Swap</button>
-            <button class="operator-btn warn" id="op-clean-pair">Clean pair</button>
-            <button class="operator-btn" id="op-apply-leader">Apply leader</button>
-            <button class="operator-btn" id="op-apply-follower">Apply follower</button>
-            <button class="operator-btn primary" id="op-apply-both">Apply pair</button>
-          </div>
+      <div class="operator-card operator-history-card">
+        <div class="operator-card-header">
+          <div class="operator-card-title">History</div>
+          <div class="operator-card-meta">Newest first</div>
+        </div>
+        <div class="operator-history" id="op-history">
+          <div class="operator-history-item">—</div>
         </div>
       </div>
     </div>
