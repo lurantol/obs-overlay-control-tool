@@ -53,8 +53,17 @@
   function applyAnim(el, type, ms) {
     const t = String(type || 'none');
     const dur = Math.max(0, Number(ms || 0));
+
+    // Store duration as a CSS custom prop
     el.style.setProperty('--anim-ms', `${dur}ms`);
-    el.setAttribute('data-anim', t);
+
+    // Normalize animation class (CSS expects .anim-<type> + .play)
+    // Remove any existing anim-* classes
+    for (const cls of Array.from(el.classList)) {
+      if (cls.startsWith('anim-')) el.classList.remove(cls);
+    }
+    el.classList.add(`anim-${t}`);
+
     // Restart animation
     el.classList.remove('play');
     // force reflow

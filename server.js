@@ -55,7 +55,6 @@ const contestParticipantsPath = path.join(dataDir, 'contest-participants.json');
 const roundsButtonsPath = path.join(dataDir, 'round-buttons.json');
 const specialsPath = path.join(dataDir, 'specials.json');
 const overlaySettingsPath = path.join(dataDir, 'overlay-settings.json');
-const presetsPath = path.join(dataDir, "presets.json");
 const overlayStatePath = path.join(dataDir, "overlay-state.json");
 const historyPath = path.join(dataDir, "history.json");
 
@@ -126,9 +125,6 @@ let overlayState = {
 // Operator history (Undo/Redo)
 let history = [];
 let historyIndex = -1;
-
-// Presets for overlay appearance
-let presets = [];
 
 
 // OBS connection state
@@ -435,12 +431,6 @@ function initData() {
     historyIndex = 0;
     saveJson(historyPath, { items: history, index: historyIndex });
   }
-
-
-  presets = loadJson(presetsPath, []);
-  if (!Array.isArray(presets)) presets = [];
-  saveJson(presetsPath, presets);
-
 
   // Custom fonts
   if (!fs.existsSync(fontsDir)) fs.mkdirSync(fontsDir, { recursive: true });
@@ -772,39 +762,6 @@ app.get("/api/overlay-state", (req, res) => {
   res.json(overlayState);
 });
 
-// API: presets (Stage 5)
-app.get("/api/presets", (req, res) => {
-  res.json({ presets });
-});
-
-app.post("/api/presets", (req, res) => {
-  const name = String(req.body?.name || "").trim();
-  if (!name) return res.status(400).json({ error: "Preset name is required" });
-  const id = crypto.randomBytes(6).toString("hex");
-  const settings = normalizeOverlaySettings(req.body?.settings || overlaySettings);
-  const preset = { id, name, settings, createdAt: Date.now() };
-  presets.push(preset);
-  saveJson(presetsPath, presets);
-  res.json({ ok: true, preset });
-});
-
-app.post("/api/presets/apply", (req, res) => {
-  const id = String(req.body?.id || "").trim();
-  const p = presets.find(x => x.id === id);
-  if (!p) return res.status(404).json({ error: "Preset not found" });
-  overlaySettings = normalizeOverlaySettings(p.settings);
-  saveJson(overlaySettingsPath, overlaySettings);
-  res.json({ ok: true, overlaySettings });
-});
-
-app.delete("/api/presets/:id", (req, res) => {
-  const id = String(req.params.id || "").trim();
-  const idx = presets.findIndex(x => x.id === id);
-  if (idx === -1) return res.status(404).json({ error: "Preset not found" });
-  const removed = presets.splice(idx, 1)[0];
-  saveJson(presetsPath, presets);
-  res.json({ ok: true, removed });
-});
 
 // API: operator state/history (Stage 3)
 app.get("/api/operator/history", (req, res) => {

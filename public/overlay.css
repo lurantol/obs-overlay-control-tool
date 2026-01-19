@@ -94,7 +94,7 @@ body.preview .root {
 }
 
 .pair-tail {
-  white-space: pre;
+  white-space: normal;
 }
 
 .hidden { display: none !important; }
