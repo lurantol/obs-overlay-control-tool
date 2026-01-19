@@ -11,6 +11,22 @@ tabButtons.forEach(btn => {
     tabContents.forEach(c => c.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + tab).classList.add('active');
+
+    // When switching tabs, re-fetch dynamic data for the newly opened view.
+    // This prevents "empty lists until hard refresh" when the operator
+    // changes contest participants in another tab.
+    if (tab === 'live') {
+      // Refresh the currently visible subtab only (cheap enough, but keep simple).
+      setTimeout(() => {
+        try { refreshFinals(); } catch {}
+        try { refreshRounds(); } catch {}
+        try { refreshSpecial(); } catch {}
+        try { refreshNext(); } catch {}
+      }, 0);
+    }
+    if (tab === 'setup') {
+      setTimeout(() => { try { refreshSetup(); } catch {} }, 0);
+    }
   });
 });
 
@@ -158,14 +174,16 @@ const importSamplePre = document.getElementById('import-sample');
 
 /** Loaders */
 async function loadContests() {
-  const res = await fetch(apiBase + '/api/contests?type=all');
+  // Some browsers (notably Safari) may cache GET responses aggressively.
+  // These endpoints are dynamic during a live event, so we force fresh data.
+  const res = await fetch(apiBase + '/api/contests?type=all', { cache: 'no-store' });
   contestsAll = await res.json();
   finalsContests = contestsAll.filter(c => c.type === 'finals');
   roundsContests = contestsAll.filter(c => c.type === 'rounds');
 }
 
 async function loadSpecials() {
-  const res = await fetch(apiBase + '/api/specials');
+  const res = await fetch(apiBase + '/api/specials', { cache: 'no-store' });
   specialsAll = await res.json();
   if (!Array.isArray(specialsAll)) specialsAll = [];
 }
@@ -228,7 +246,7 @@ function fillSpecialList() {
 }
 
 async function loadRoundButtons() {
-  const res = await fetch(apiBase + '/api/round-buttons');
+  const res = await fetch(apiBase + '/api/round-buttons', { cache: 'no-store' });
   roundButtons = await res.json();
   if (!Array.isArray(roundButtons) || roundButtons.length === 0) roundButtons = ['Heat 1', 'Heat 2', 'Heat 3', 'Heat 4'];
   roundButtonsInput.value = roundButtons.join(', ');
@@ -236,7 +254,7 @@ async function loadRoundButtons() {
 
 async function loadParticipantsForContest(contestId) {
   const url = contestId ? `/api/participants?contestId=${encodeURIComponent(contestId)}` : '/api/participants';
-  const res = await fetch(apiBase + url);
+  const res = await fetch(apiBase + url, { cache: 'no-store' });
   participants = await res.json();
 }
 
@@ -595,7 +613,7 @@ document.getElementById('next-reset').addEventListener('click', resetNext);
 
 /** Setup (contest participants subset) */
 async function loadAllParticipantsForSetup() {
-  const res = await fetch(apiBase + '/api/participants');
+  const res = await fetch(apiBase + '/api/participants', { cache: 'no-store' });
   return await res.json();
 }
 
@@ -671,6 +689,10 @@ document.getElementById('save-contest-btn').addEventListener('click', async () =
     const data = await res.json();
     if (!res.ok) { setText('status-setup', 'Ошибка: ' + (data.error || 'unknown')); return; }
     setText('status-setup', 'Состав сохранён');
+
+    // Keep Live tab in sync without requiring full page reload.
+    // If the operator goes to Live right after setup, the lists should already be fresh.
+    try { await refreshFinals(); } catch {}
   } catch {
     setText('status-setup', 'Ошибка связи с сервером');
   }

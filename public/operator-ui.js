@@ -39,10 +39,12 @@
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
   }
-  if (openBtn) openBtn.addEventListener('click', () => {
+  if (openBtn) openBtn.addEventListener('click', async () => {
     openModal();
-    // lazy load data each time
-    loadFinals();
+    // Lazy load data each time, but await to avoid "empty lists until you click around".
+    if (leaderListEl) leaderListEl.innerHTML = '<div class="operator-list-empty">loading...</div>';
+    if (followerListEl) followerListEl.innerHTML = '<div class="operator-list-empty">loading...</div>';
+    try { await loadFinals(); } catch {}
   });
 
   function resetPick() {

@@ -722,6 +722,15 @@ function parseParticipantsFromRows(rows, numberCol, nameCol, leaderParity = 'odd
 app.use(cors());
 app.use(express.json());
 
+// Prevent stale data in browser UIs (Safari can cache fetch GETs aggressively).
+// All API responses represent live operator state and should be treated as non-cacheable.
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Operator Mode standalone page (for iPad)
 app.get('/operator', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'operator.html'));

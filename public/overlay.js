@@ -47,6 +47,13 @@
 
   function setVisible(el, isVisible) {
     if (!hideEmpty) return;
+    // Special case: when clearing the pair we don't want the title to jump down.
+    // So we keep the pair line's height reserved.
+    if (el && el.id === 'pair') {
+      el.classList.toggle('reserve', !isVisible);
+      el.classList.remove('hidden');
+      return;
+    }
     el.classList.toggle('hidden', !isVisible);
   }
 

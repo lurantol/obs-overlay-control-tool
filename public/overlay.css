@@ -91,6 +91,12 @@ body.preview .root {
   color: var(--pair-color);
   text-shadow: 0 2px 10px rgba(0,0,0,0.45);
   line-height: 1.05;
+  /*
+    When the pair text is cleared we keep the line in the layout (visibility: hidden)
+    so the title doesn't jump. However, an empty element has 0 height by default.
+    min-height keeps the row height stable even when there is no text.
+  */
+  min-height: 1.05em;
 }
 
 .pair-tail {
@@ -98,6 +104,12 @@ body.preview .root {
 }
 
 .hidden { display: none !important; }
+
+/*
+  Keep layout height stable when the pair line is "cleared".
+  We hide it visually, but preserve its height so the title doesn't jump down.
+*/
+.reserve { visibility: hidden !important; }
 
 /* Animations (type is set as a class on the element) */
 
