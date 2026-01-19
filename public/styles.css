@@ -186,6 +186,49 @@ code{background:#f5f5f5;padding:2px 4px;border-radius:4px}
   padding: 12px;
 }
 
+.operator-scene-hotkeys {
+  padding: 0 12px 12px 12px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.operator-scene-hotkey {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(230,234,240,0.92);
+  cursor: pointer;
+  text-align: left;
+}
+
+.operator-scene-hotkey:active {
+  transform: translateY(1px);
+}
+
+.operator-scene-hotkey .k {
+  font-size: 11px;
+  color: rgba(230,234,240,0.7);
+  font-weight: 800;
+}
+
+.operator-scene-hotkey .n {
+  font-size: 12px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operator-scene-hotkey.active {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.18);
+}
+
 /* Controls compactness */
 .operator-controls-current {
   display: flex;

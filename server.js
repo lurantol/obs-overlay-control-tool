@@ -294,6 +294,60 @@ async function getPreviewInfoAndScreenshot() {
   }
 }
 
+async function getSceneListAndCurrent() {
+  const c = await ensureObsConnected();
+  if (!c.ok) return { ok: false, error: c.error };
+  try {
+    const studio = await getStudioModeEnabled();
+    const list = await obs.call('GetSceneList');
+    const prog = await obs.call('GetCurrentProgramScene');
+    let prev = null;
+    if (studio.ok && studio.studioModeEnabled) {
+      prev = await obs.call('GetCurrentPreviewScene');
+    }
+    obsLastOkAt = Date.now();
+    return {
+      ok: true,
+      studioModeEnabled: studio.ok ? Boolean(studio.studioModeEnabled) : false,
+      currentProgramSceneName: prog.currentProgramSceneName || prog.sceneName || '',
+      currentPreviewSceneName: prev ? (prev.currentPreviewSceneName || prev.sceneName || '') : '',
+      scenes: Array.isArray(list.scenes) ? list.scenes.map(s => ({ sceneName: s.sceneName })) : []
+    };
+  } catch (e) {
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = String(e?.message || e || 'GetSceneList failed');
+    return { ok: false, error: obsLastErrorMessage };
+  }
+}
+
+async function setObsScene(sceneName, target) {
+  const c = await ensureObsConnected();
+  if (!c.ok) return { ok: false, error: c.error };
+  const name = String(sceneName || '').trim();
+  if (!name) return { ok: false, error: 'Scene name is empty' };
+
+  let t = String(target || 'auto');
+  if (t !== 'preview' && t !== 'program' && t !== 'auto') t = 'auto';
+
+  try {
+    if (t === 'auto') {
+      const studio = await getStudioModeEnabled();
+      t = (studio.ok && studio.studioModeEnabled) ? 'preview' : 'program';
+    }
+    if (t === 'preview') {
+      await obs.call('SetCurrentPreviewScene', { sceneName: name });
+    } else {
+      await obs.call('SetCurrentProgramScene', { sceneName: name });
+    }
+    obsLastOkAt = Date.now();
+    return { ok: true, target: t };
+  } catch (e) {
+    obsLastErrorAt = Date.now();
+    obsLastErrorMessage = String(e?.message || e || 'Set scene failed');
+    return { ok: false, error: obsLastErrorMessage };
+  }
+}
+
 async function disconnectObs() {
   // If client has never been loaded, nothing to disconnect.
   if (!obsClient && !obs) {
@@ -877,6 +931,28 @@ app.get('/api/operator/obs-status', async (req, res) => {
     lastErrorMessage: obsLastErrorMessage,
     studioModeEnabled
   });
+});
+
+// Scenes (hotkeys)
+app.get('/api/operator/scenes', async (req, res) => {
+  const r = await getSceneListAndCurrent();
+  if (!r.ok) return res.status(503).json({ ok: false, error: r.error });
+  res.json(r);
+});
+
+app.post('/api/operator/switch-scene', async (req, res) => {
+  const body = (req.body && typeof req.body === 'object') ? req.body : {};
+  let sceneName = body.sceneName;
+  if (!sceneName && Number.isFinite(body.index)) {
+    const list = await getSceneListAndCurrent();
+    if (!list.ok) return res.status(503).json({ ok: false, error: list.error });
+    const idx = Math.max(0, Math.min(list.scenes.length - 1, Number(body.index)));
+    sceneName = list.scenes[idx]?.sceneName;
+  }
+  const target = body.target || 'auto';
+  const r = await setObsScene(sceneName, target);
+  if (!r.ok) return res.status(500).json({ ok: false, error: r.error });
+  res.json({ ok: true, target: r.target });
 });
 
 app.get('/api/operator/program.jpg', async (req, res) => {

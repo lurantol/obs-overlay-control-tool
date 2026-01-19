@@ -80,6 +80,7 @@
   const previewSceneEl = $('op-preview-scene');
   const programUpdatedEl = $('op-program-updated');
   const previewUpdatedEl = $('op-preview-updated');
+  const sceneHotkeysEl = $('op-scene-hotkeys');
 
   const hostEl = $('op-host') || $('op-obs-host');
   const portEl = $('op-port') || $('op-obs-port');
@@ -136,6 +137,78 @@
   };
 
   let lastOverlayState = null;
+
+  // OBS scenes hotkeys
+  let scenes = [];
+  let studioModeEnabled = false;
+  let currentProgramSceneName = '';
+  let currentPreviewSceneName = '';
+
+  function isTypingInField(e) {
+    const t = e.target;
+    if (!t) return false;
+    const tag = String(t.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+    if (t.isContentEditable) return true;
+    return false;
+  }
+
+  async function loadScenes() {
+    try {
+      const r = await apiGet('/api/operator/scenes');
+      if (!r || !r.ok) return;
+      scenes = Array.isArray(r.scenes) ? r.scenes : [];
+      studioModeEnabled = Boolean(r.studioModeEnabled);
+      currentProgramSceneName = r.currentProgramSceneName || '';
+      currentPreviewSceneName = r.currentPreviewSceneName || '';
+      renderSceneHotkeys();
+    } catch {
+      // ignore
+    }
+  }
+
+  async function switchSceneByIndex(index) {
+    try {
+      await apiPost('/api/operator/switch-scene', { index, target: 'auto' });
+      // refresh state for highlighting
+      setTimeout(loadScenes, 150);
+    } catch (e) {
+      // optional: show in hint
+      if (hintEl) hintEl.textContent = String(e?.message || e || 'Failed to switch scene');
+    }
+  }
+
+  function renderSceneHotkeys() {
+    if (!sceneHotkeysEl) return;
+    // Show only when studio mode is enabled (user requested to place under Preview in studio mode)
+    if (!studioModeEnabled || scenes.length === 0) {
+      sceneHotkeysEl.style.display = 'none';
+      sceneHotkeysEl.innerHTML = '';
+      return;
+    }
+    sceneHotkeysEl.style.display = '';
+    sceneHotkeysEl.innerHTML = '';
+
+    const max = Math.min(5, scenes.length);
+    for (let i = 0; i < max; i++) {
+      const name = scenes[i].sceneName || '';
+      const btn = document.createElement('button');
+      btn.className = 'operator-scene-hotkey' + (name && name === currentPreviewSceneName ? ' active' : '');
+      btn.type = 'button';
+      btn.innerHTML = `<div class="k">${i + 1}</div><div class="n">${escapeHtml(name)}</div>`;
+      btn.addEventListener('click', () => switchSceneByIndex(i));
+      sceneHotkeysEl.appendChild(btn);
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
   function setObsPill(stateText, kind) {
     if (obsStateEl) obsStateEl.textContent = stateText;
@@ -659,5 +732,21 @@
     refreshOverlayState();
     setInterval(refreshHistory, 1500);
     setInterval(refreshOverlayState, 1500);
+
+    // Scenes hotkeys (only visible in Studio Mode)
+    loadScenes();
+    setInterval(loadScenes, 3000);
+
+    document.addEventListener('keydown', (e) => {
+      if (!studioModeEnabled) return;
+      if (isTypingInField(e)) return;
+      const k = String(e.key || '');
+      if (!/^[1-5]$/.test(k)) return;
+      const idx = parseInt(k, 10) - 1;
+      if (!Number.isFinite(idx)) return;
+      if (idx < 0 || idx >= Math.min(5, scenes.length)) return;
+      e.preventDefault();
+      switchSceneByIndex(idx);
+    });
   });
 })();
