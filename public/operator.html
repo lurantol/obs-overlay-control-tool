@@ -26,8 +26,9 @@
     </div>
 
     <div id="operator-subtab-view" class="operator-subtab active">
-      <div class="operator-grid">
-        <div class="operator-card operator-preview-card">
+      <div class="operator-grid operator-grid-v4">
+        <!-- Row 1: ON AIR | PREVIEW | SCENES -->
+        <div class="operator-card operator-preview-card op-area-program" id="op-program-card">
           <div class="operator-card-header">
             <div class="operator-card-title">ON AIR</div>
             <div class="operator-card-meta operator-card-meta-inline">
@@ -41,12 +42,16 @@
           <div class="operator-preview" id="op-program-preview">
             <div class="operator-preview-placeholder">Program preview</div>
           </div>
+          <div class="operator-shot-caption" aria-label="On-air overlay text">
+            <div class="t" id="op-program-caption-title">—</div>
+            <div class="p" id="op-program-caption-pair">—</div>
+          </div>
         </div>
 
-        <div class="operator-card operator-preview-card">
+        <div class="operator-card operator-preview-card op-area-preview" id="op-preview-card">
           <div class="operator-card-header">
-            <div class="operator-card-title">PREVIEW</div>
-            <div class="operator-card-meta operator-card-meta-inline">
+            <div class="operator-card-title" id="op-preview-title">PREVIEW</div>
+            <div class="operator-card-meta operator-card-meta-inline" id="op-preview-meta">
               <span>Studio Mode</span>
               <span class="operator-meta-sep">|</span>
               <span>Scene: <span id="op-preview-scene">—</span></span>
@@ -57,10 +62,25 @@
           <div class="operator-preview" id="op-preview-preview">
             <div class="operator-preview-placeholder">Preview</div>
           </div>
-          <div class="operator-scene-hotkeys" id="op-scene-hotkeys" style="display:none"></div>
+          <div class="operator-shot-caption" aria-label="Preview overlay text">
+            <div class="t" id="op-preview-caption-title">—</div>
+            <div class="p" id="op-preview-caption-pair">—</div>
+          </div>
         </div>
 
-        <div class="operator-card operator-controls-card">
+        <div class="operator-card operator-scenes-card op-area-scenes" id="op-scenes-card">
+          <div class="operator-card-header">
+            <div class="operator-card-title" id="op-scenes-title">SCENES</div>
+            <div class="operator-card-meta" id="op-scenes-meta">—</div>
+          </div>
+          <div class="operator-scenes-body">
+            <div class="operator-scene-hotkeys" id="op-scene-hotkeys" style="display:none"></div>
+            <button class="operator-scene-transition" id="op-transition" type="button" style="display:none">Transition</button>
+          </div>
+        </div>
+
+        <!-- Row 2: CONTROLS | CHOOSE DANCERS -->
+        <div class="operator-card operator-controls-card op-area-controls">
           <div class="operator-card-header">
             <div class="operator-card-title">Controls</div>
             <div class="operator-card-meta">Large buttons</div>
@@ -88,10 +108,9 @@
             <button class="operator-btn" id="op-apply">Apply to OBS</button>
             <button class="operator-btn secondary" id="op-choose" style="display:none">Choose dancers</button>
           </div>
-
         </div>
 
-        <div class="operator-card operator-dancers-card">
+        <div class="operator-card operator-dancers-card op-area-dancers">
           <div class="operator-card-header">
             <div class="operator-card-title">Choose dancers</div>
             <div class="operator-card-meta">Finals only</div>

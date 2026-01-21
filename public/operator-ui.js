@@ -83,6 +83,11 @@
   const programUpdatedEl = $('op-program-updated');
   const previewUpdatedEl = $('op-preview-updated');
   const sceneHotkeysEl = $('op-scene-hotkeys');
+  const transitionBtnEl = $('op-transition');
+  const previewCardEl = $('op-preview-card');
+  const previewTitleEl = $('op-preview-title');
+  const previewMetaEl = $('op-preview-meta');
+  const scenesMetaEl = $('op-scenes-meta');
 
   const hostEl = $('op-host') || $('op-obs-host');
   const portEl = $('op-port') || $('op-obs-port');
@@ -120,6 +125,12 @@
 
   const currentTitleEl = $('op-current-title');
 
+  // Always show overlay text as plain captions (useful even when screenshots are small)
+  const programCaptionTitleEl = $('op-program-caption-title');
+  const programCaptionPairEl = $('op-program-caption-pair');
+  const previewCaptionTitleEl = $('op-preview-caption-title');
+  const previewCaptionPairEl = $('op-preview-caption-pair');
+
   const historyEl = $('op-history');
 
   // State
@@ -143,6 +154,8 @@
   // OBS scenes hotkeys
   let scenes = [];
   let studioModeEnabled = false;
+  // Default layout until we get real status from OBS.
+  document.body.classList.add('studio-off');
   let currentProgramSceneName = '';
   let currentPreviewSceneName = '';
 
@@ -171,7 +184,10 @@
 
   async function switchSceneByIndex(index) {
     try {
-      await apiPost('/api/operator/switch-scene', { index, target: 'auto' });
+      // Studio ON: switch Preview scenes (then Transition)
+      // Studio OFF: switch Program directly
+      const target = studioModeEnabled ? 'preview' : 'program';
+      await apiPost('/api/operator/switch-scene', { index, target });
       // refresh state for highlighting
       setTimeout(loadScenes, 150);
     } catch (e) {
@@ -190,34 +206,55 @@
     }
   }
 
+  if (transitionBtnEl) {
+    transitionBtnEl.addEventListener('click', triggerTransition);
+  }
+
   function renderSceneHotkeys() {
     if (!sceneHotkeysEl) return;
-    // Show only when studio mode is enabled (user requested to place under Preview in studio mode)
-    if (!studioModeEnabled || scenes.length === 0) {
-      sceneHotkeysEl.style.display = 'none';
-      sceneHotkeysEl.innerHTML = '';
-      return;
-    }
-    sceneHotkeysEl.style.display = '';
+    // Variant 3 UI:
+    // - Scene buttons are ALWAYS visible (if scenes exist) in the right column.
+    // - Studio ON: show PREVIEW + scenes + Transition.
+    // - Studio OFF: hide PREVIEW, show only scenes (no Transition).
+
+    const hasScenes = scenes.length > 0;
+    sceneHotkeysEl.style.display = hasScenes ? '' : 'none';
     sceneHotkeysEl.innerHTML = '';
 
-    const max = Math.min(5, scenes.length);
+    // Toggle PREVIEW card based on Studio Mode.
+    if (previewCardEl) previewCardEl.style.display = studioModeEnabled ? '' : 'none';
+
+    // Layout: collapse grid when Studio Mode is OFF.
+    document.body.classList.toggle('studio-on', studioModeEnabled);
+    document.body.classList.toggle('studio-off', !studioModeEnabled);
+
+    // Update small labels to reduce confusion.
+    if (scenesMetaEl) scenesMetaEl.textContent = studioModeEnabled ? 'Target: Preview' : 'Target: Program';
+    if (previewTitleEl) previewTitleEl.textContent = 'PREVIEW';
+    if (previewMetaEl) previewMetaEl.style.display = studioModeEnabled ? '' : 'none';
+
+    // Transition button is only meaningful in Studio Mode.
+    if (transitionBtnEl) {
+      transitionBtnEl.style.display = studioModeEnabled ? '' : 'none';
+    }
+
+    if (!hasScenes) return;
+
+    const max = Math.min(10, scenes.length);
+    const activeName = studioModeEnabled ? currentPreviewSceneName : currentProgramSceneName;
     for (let i = 0; i < max; i++) {
       const name = scenes[i].sceneName || '';
       const btn = document.createElement('button');
-      btn.className = 'operator-scene-hotkey' + (name && name === currentPreviewSceneName ? ' active' : '');
+      const isActive = name && name === activeName;
+      const isOnAir = name && name === currentProgramSceneName;
+      btn.className = 'operator-scene-hotkey'
+        + (isActive ? ' active' : '')
+        + (isOnAir ? ' onair' : '');
       btn.type = 'button';
       btn.innerHTML = `<div class="k">${i + 1}</div><div class="n">${escapeHtml(name)}</div>`;
       btn.addEventListener('click', () => switchSceneByIndex(i));
       sceneHotkeysEl.appendChild(btn);
     }
-
-    const transitionBtn = document.createElement('button');
-    transitionBtn.className = 'operator-scene-transition';
-    transitionBtn.type = 'button';
-    transitionBtn.textContent = 'Transition';
-    transitionBtn.addEventListener('click', triggerTransition);
-    sceneHotkeysEl.appendChild(transitionBtn);
   }
 
   function escapeHtml(s) {
@@ -313,13 +350,20 @@
       img.alt = id;
       img.style.width = '100%';
       img.style.height = '100%';
-      img.style.objectFit = 'cover';
+      // IMPORTANT: use 'contain' so the whole frame is visible.
+      // With 'cover' the bottom-left overlay (division/pair) gets cropped.
+      img.style.objectFit = 'contain';
+      img.style.background = '#000';
       containerEl.appendChild(img);
     }
     return img;
   }
 
   async function fetchAndShowImage(url, kind) {
+    if (kind === 'preview' && !studioModeEnabled) {
+      // Variant #3: when Studio Mode is OFF we don't show Preview at all.
+      return;
+    }
     const box = kind === 'program' ? programBox : previewBox;
     const sceneEl = kind === 'program' ? programSceneEl : previewSceneEl;
     const updEl = kind === 'program' ? programUpdatedEl : previewUpdatedEl;
@@ -328,13 +372,18 @@
 
     const r = await fetch(url, { cache: 'no-store' });
     if (r.status === 204) {
-      box.innerHTML = '<div class="operator-preview-placeholder">Studio Mode is OFF</div>';
+      // Preview endpoint returns 204 when Studio Mode is OFF.
+      // Program should ideally never be 204, but handle defensively.
+      const msg = (kind === 'preview') ? 'Studio Mode is OFF' : 'Program unavailable';
+      box.innerHTML = `<div class="operator-preview-placeholder">${msg}</div>`;
+      box.style.removeProperty('--shot-bg');
       if (sceneEl) sceneEl.textContent = '—';
       if (updEl) updEl.textContent = '—';
       return;
     }
     if (!r.ok) {
       box.innerHTML = `<div class="operator-preview-placeholder">${kind.toUpperCase()} unavailable</div>`;
+      box.style.removeProperty('--shot-bg');
       if (sceneEl) sceneEl.textContent = '—';
       if (updEl) updEl.textContent = '—';
       return;
@@ -356,6 +405,8 @@
       previewObjUrl = objUrl;
     }
     img.src = objUrl;
+    // Provide blurred background fill to avoid black side bars on contain.
+    box.style.setProperty('--shot-bg', `url("${objUrl}")`);
 
     if (sceneEl) sceneEl.textContent = sceneName || '—';
     if (updEl) updEl.textContent = new Date().toLocaleTimeString();
@@ -483,6 +534,20 @@
       if (currentTitleEl) {
         currentTitleEl.textContent = (lastOverlayState?.title || '—');
       }
+
+      const titleText = (lastOverlayState?.title || '—');
+      const withoutPair = Boolean(lastOverlayState?.withoutPair);
+      const leader = (lastOverlayState?.leader || '');
+      const follower = (lastOverlayState?.follower || '');
+      const pairText = withoutPair
+        ? (leader || follower || '—')
+        : ((leader && follower) ? `${leader} — ${follower}` : (leader || follower || '—'));
+
+      if (programCaptionTitleEl) programCaptionTitleEl.textContent = titleText;
+      if (programCaptionPairEl) programCaptionPairEl.textContent = pairText;
+      // Preview caption is informational only; use same overlay-state.
+      if (previewCaptionTitleEl) previewCaptionTitleEl.textContent = titleText;
+      if (previewCaptionPairEl) previewCaptionPairEl.textContent = pairText;
     } catch {}
   }
 
