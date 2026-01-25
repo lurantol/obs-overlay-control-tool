@@ -148,6 +148,7 @@
         if (s.pairFontFamily) document.documentElement.style.setProperty('--pair-font-family', String(s.pairFontFamily));
         if (Number.isFinite(Number(s.titleSizePx))) document.documentElement.style.setProperty('--title-size', `${Number(s.titleSizePx)}px`);
         if (Number.isFinite(Number(s.pairSizePx))) document.documentElement.style.setProperty('--pair-size', `${Number(s.pairSizePx)}px`);
+        if (Number.isFinite(Number(s.titlePairGapPx))) document.documentElement.style.setProperty('--title-pair-gap', `${Number(s.titlePairGapPx)}px`);
         if (s.titleColor) document.documentElement.style.setProperty('--title-color', String(s.titleColor));
         if (s.pairColor) document.documentElement.style.setProperty('--pair-color', String(s.pairColor));
       }

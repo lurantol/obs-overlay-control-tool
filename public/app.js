@@ -120,6 +120,7 @@ const overlayPreviewFrame = document.getElementById('overlay-preview');
 const overlayTitleSizeInput = document.getElementById('overlay-title-size');
 const overlayPairSizeInput = document.getElementById('overlay-pair-size');
 const overlayTitleColorInput = document.getElementById('overlay-title-color');
+const overlayTitlePairGapInput = document.getElementById('overlay-title-pair-gap');
 const overlayPairColorInput = document.getElementById('overlay-pair-color');
 const overlayTitleAnimSelect = document.getElementById("overlay-title-anim");
 const overlayTitleAnimMsInput = document.getElementById("overlay-title-anim-ms");
@@ -969,6 +970,7 @@ async function loadOverlaySettingsUI() {
     overlayTitleSizeInput.value = Number(s.titleSizePx || 48);
     overlayPairSizeInput.value = Number(s.pairSizePx || 40);
     overlayTitleColorInput.value = String(s.titleColor || '#ffffff');
+    if (overlayTitlePairGapInput) overlayTitlePairGapInput.value = Number(s.titlePairGapPx ?? 8);
     overlayPairColorInput.value = String(s.pairColor || '#ffffff');
     if (overlayTitleAnimSelect) overlayTitleAnimSelect.value = String(s.titleAnimType || "none");
     if (overlayTitleAnimMsInput) overlayTitleAnimMsInput.value = Number(s.titleAnimMs ?? 500);
@@ -993,6 +995,7 @@ if (overlaySaveBtn) {
         titleSizePx: Number(overlayTitleSizeInput.value),
         pairSizePx: Number(overlayPairSizeInput.value),
         titleColor: overlayTitleColorInput.value,
+        titlePairGapPx: overlayTitlePairGapInput ? Number(overlayTitlePairGapInput.value) : 8,
         pairColor: overlayPairColorInput.value,
         titleAnimType: overlayTitleAnimSelect ? overlayTitleAnimSelect.value : "none",
         titleAnimMs: overlayTitleAnimMsInput ? Number(overlayTitleAnimMsInput.value) : 500,

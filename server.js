@@ -88,6 +88,7 @@ let overlaySettings = {
   pairFontFamily: "system-ui",
   titleSizePx: 48,
   pairSizePx: 40,
+  titlePairGapPx: 8,
   titleColor: "#ffffff",
   pairColor: "#ffffff",
   titleAnimType: "none",
@@ -466,6 +467,7 @@ function normalizeOverlaySettings(input) {
   const pairFontFamily = String(s.pairFontFamily ?? overlaySettings.pairFontFamily).trim() || overlaySettings.pairFontFamily;
   const titleSizePx = clampInt(s.titleSizePx ?? overlaySettings.titleSizePx, 10, 200, overlaySettings.titleSizePx);
   const pairSizePx = clampInt(s.pairSizePx ?? overlaySettings.pairSizePx, 10, 200, overlaySettings.pairSizePx);
+  const titlePairGapPx = clampInt(s.titlePairGapPx ?? overlaySettings.titlePairGapPx, 0, 200, overlaySettings.titlePairGapPx);
   const titleColor = normalizeHexColor(s.titleColor ?? overlaySettings.titleColor) || overlaySettings.titleColor;
   const pairColor = normalizeHexColor(s.pairColor ?? overlaySettings.pairColor) || overlaySettings.pairColor;
 
@@ -479,7 +481,7 @@ function normalizeOverlaySettings(input) {
   const followerAnimMs = clampInt(s.followerAnimMs ?? overlaySettings.followerAnimMs, 0, 5000, overlaySettings.followerAnimMs);
 
   return {
-    titleFontFamily, pairFontFamily, titleSizePx, pairSizePx, titleColor, pairColor,
+    titleFontFamily, pairFontFamily, titleSizePx, pairSizePx, titlePairGapPx, titleColor, pairColor,
     titleAnimType, titleAnimMs, leaderAnimType, leaderAnimMs, followerAnimType, followerAnimMs
   };
 }
